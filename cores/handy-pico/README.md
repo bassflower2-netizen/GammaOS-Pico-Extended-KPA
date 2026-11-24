@@ -9,3 +9,11 @@ Next: replace upstream VFS and libc/heap dependencies with LK-safe implementatio
 ## Stage 2: native ARM probe
 
 `build_arm_probe.sh` compiles all Handy C++ emulation sources and the adapter with the ARMv7-A soft-float ABI, links them statically with newlib and a bounded test heap, and runs the same synthetic smoke test via qemu-arm. The file/VFS functions explicitly reject filesystem operations. Only the test executable's separate qemu_entry.c uses Linux syscalls (stdout/stderr and exit); that file must never be included in a bootloader blob. This is not yet a verified bootloader memory map, real BIOS/EEPROM support, or a deployable .blob. CI results determine whether this experimental probe actually works.
+
+## Stage 3: experimental flat blob
+The native probe additionally links a GammaOS-compatible 20-byte image header
+(magic LNX1, ABI 1), tests the exact bytes by mapping the existing armSNES overlay
+0x4F000000–0x50000000 in QEMU, and exercises two game sessions via the export table.
+No Linux syscall entry is linked into the blob. The proposed shared slot is not
+enabled in LK yet; hardware cache, lifetime, exception and memory ownership checks
+remain mandatory. The blob is intentionally not copied to the firmware SD package.

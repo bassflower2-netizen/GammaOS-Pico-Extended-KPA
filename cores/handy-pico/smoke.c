@@ -49,7 +49,7 @@ int main(void)
     free(state);
     handy_pico_close();
     assert(!handy_pico_ram() && !handy_pico_state_size());
-    printf("Handy adapter smoke: %u video callbacks, %u stereo samples, %zu byte state\n",
-           videos, audio_frames, size);
+    printf("Handy adapter smoke: %u video callbacks, %u stereo samples, %lu byte state\n",
+           videos, audio_frames, (unsigned long)size);
     return 0;
 }

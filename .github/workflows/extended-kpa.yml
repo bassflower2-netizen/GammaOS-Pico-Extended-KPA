@@ -10,6 +10,8 @@ on:
       - 'emu/**'
       - 'tools/**'
       - 'build_konkr_kpa.sh'
+      # Experimental core has its own CI; baseline runs when LK or packaging changes.
+      - '!cores/handy-pico/**'
 permissions:
   contents: read
 jobs:

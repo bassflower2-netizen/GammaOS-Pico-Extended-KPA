@@ -45,3 +45,41 @@ arm-none-eabi-readelf -h "$OUT/handy-arm.elf"
 arm-none-eabi-size "$OUT/handy-arm.elf"
 test -z "$(arm-none-eabi-nm -u "$OUT/handy-arm.elf")"
 timeout 45s qemu-arm "$OUT/handy-arm.elf"
+
+# Produce a flat core image using the proven native objects, excluding the
+# Linux syscall entry and smoke program. The ELF is only a build intermediate.
+BLOB_OBJS=()
+for obj in "${OBJS[@]}"; do
+    case "$obj" in */smoke.c.o|*/qemu_entry.c.o) ;; *) BLOB_OBJS+=("$obj");; esac
+done
+"$CC" "${FLAGS[@]}" "${INC[@]}" -std=gnu99 -c "$HERE/blob_entry.c" -o "$OUT/blob_entry.o"
+"$CC" "${FLAGS[@]}" -nostartfiles -static -Wl,-T,"$HERE/blob.ld" -Wl,--gc-sections -Wl,--no-undefined -Wl,-Map,"$OUT/handy-blob.map" \
+    "${BLOB_OBJS[@]}" "$OUT/blob_entry.o" -Wl,--start-group -lc -lm -lgcc -lnosys -Wl,--end-group -o "$OUT/handy-blob.elf"
+test -z "$(arm-none-eabi-nm -u "$OUT/handy-blob.elf")"
+arm-none-eabi-objcopy -O binary "$OUT/handy-blob.elf" "$OUT/handy-pico.blob"
+python3 - "$OUT/handy-pico.blob" <<'PY'
+import struct, sys
+data = open(sys.argv[1], "rb").read()
+magic, version, entry, load, span = struct.unpack_from("<5I", data)
+assert magic == 0x31584e4c and version == 1
+assert 20 <= entry < load == len(data) <= span <= 0x1000000
+assert entry % 4 == 0
+print(f"Handy flat blob: {load} bytes, span {span}, entry +0x{entry:x}")
+PY
+# Embed the exact flat bytes in a separate user-mode test process. This
+# process maps the proposed slot and uses the exported ABI, not direct calls.
+cat > "$OUT/embed.S" <<EOF
+.section .rodata.probe_blob,"a",%progbits
+.balign 16
+.global probe_blob_start, probe_blob_end
+probe_blob_start:
+.incbin "$OUT/handy-pico.blob"
+probe_blob_end:
+.section .note.GNU-stack,"",%progbits
+EOF
+"$CC" -march=armv7-a -mfloat-abi=soft -c "$OUT/embed.S" -o "$OUT/embed.o"
+"$CC" "${FLAGS[@]}" "${INC[@]}" -std=gnu99 -c "$HERE/blob_smoke.c" -o "$OUT/blob_smoke.o"
+"$CC" "${FLAGS[@]}" -nostartfiles -static -Wl,-e,probe_start -Wl,--gc-sections -Wl,--no-undefined \
+    "$OUT/blob_smoke.o" "$OUT/embed.o" "$OUT/qemu_entry.c.o" "$OUT/runtime.o" \
+    -Wl,--start-group -lc -lm -lgcc -lnosys -Wl,--end-group -o "$OUT/blob-smoke.elf"
+timeout 45s qemu-arm "$OUT/blob-smoke.elf"
