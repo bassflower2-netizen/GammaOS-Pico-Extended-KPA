@@ -11,11 +11,20 @@ CC=arm-none-eabi-gcc
 CXX=arm-none-eabi-g++
 # newlib's C++ inttypes.h may be included before libretro's header.
 # Define the standard macro opt-ins at the compiler command line.
-FLAGS=(-D__STDC_FORMAT_MACROS=1 -D__STDC_LIMIT_MACROS=1 -D__STDC_CONSTANT_MACROS=1 -march=armv7-a -mfloat-abi=soft -marm -mthumb-interwork -ffreestanding -fno-common -fno-short-enums -ffunction-sections -fdata-sections -Os)
+FLAGS=(-D__STDC_FORMAT_MACROS=1 -D__STDC_LIMIT_MACROS=1 -D__STDC_CONSTANT_MACROS=1 -include "$HERE/native_inttypes.h" -march=armv7-a -mfloat-abi=soft -marm -mthumb-interwork -ffreestanding -fno-common -fno-short-enums -ffunction-sections -fdata-sections -Os)
 INC=(-I"$UPSTREAM" -I"$UPSTREAM/lynx" -I"$UPSTREAM/libretro" -I"$UPSTREAM/libretro-common/include")
 CORE_FLAGS=(-DFRONTEND_SUPPORTS_RGB565 -DWANT_CRC32 -DHAVE_NO_LANGEXTRA -DNDEBUG)
-# Fail early if the toolchain has not exposed the integer formatting macros.
-printf '#include <inttypes.h>\n#ifndef PRId64\n#error PRId64 missing\n#endif\n' | "$CXX" "${FLAGS[@]}" -std=gnu++11 -x c++ -E - >/dev/null
+# Verify integer formats against the actual argument types (not just presence).
+# If newlib omits PRIuPTR, select its type-correct spelling using the compiler.
+for fmt in u lu; do
+    if printf '#include <stdio.h>\n#include <stdint.h>\nvoid check(uintptr_t p) { printf("%%%s", p); }\n' "$fmt" |
+        "$CXX" -march=armv7-a -mfloat-abi=soft -std=gnu++11 -Wformat=2 -Werror -x c++ -fsyntax-only - >/dev/null 2>&1; then
+        FLAGS+=("-DHANDY_PRIUPTR=\"$fmt\"")
+        break
+    fi
+done
+printf '#include <stdio.h>\nvoid check(int64_t i,uint64_t u,uintptr_t p) { printf("%%" PRId64 " %%" PRIu64 " %%" PRIuPTR, i,u,p); }\n' |
+    "$CXX" "${FLAGS[@]}" -std=gnu++11 -Wformat=2 -Werror -x c++ -fsyntax-only -
 OBJS=()
 for src in lynx/lynxdec.cpp lynx/cart.cpp lynx/memmap.cpp lynx/mikie.cpp lynx/ram.cpp lynx/rom.cpp lynx/susie.cpp lynx/system.cpp lynx/eeprom.cpp libretro/libretro.cpp blip/Blip_Buffer.cpp blip/Stereo_Buffer.cpp; do
     obj="$OUT/${src//\//_}.o"
