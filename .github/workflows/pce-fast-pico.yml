@@ -1,0 +1,84 @@
+name: PC Engine HuCard port probes
+on:
+  workflow_dispatch:
+  push:
+    branches: [extended/lynx]
+    paths:
+      - 'cores/pce-fast-pico/**'
+      - '.github/workflows/pce-fast-pico.yml'
+permissions:
+  contents: read
+jobs:
+  runtime:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [host, arm-linux-soft]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: libretro/beetle-pce-fast-libretro
+          ref: 4cf066e22533186d0cfad85a0fec2aced93e4e29
+          path: pce-upstream
+          persist-credentials: false
+      - name: Install ARM Linux test compiler
+        if: matrix.arch == 'arm-linux-soft'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabi g++-arm-linux-gnueabi qemu-user
+      - name: Compile and execute HuCard smoke
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -eu
+          CC=gcc
+          CXX=g++
+          FLAGS=""
+          if [ "$ARCH" = arm-linux-soft ]; then
+            CC=arm-linux-gnueabi-gcc
+            CXX=arm-linux-gnueabi-g++
+            FLAGS="-march=armv7-a -mfloat-abi=soft -marm"
+          fi
+          make -C pce-upstream -j2 platform=unix HAVE_CDROM=0 HAVE_CHD=0 NEED_TREMOR=0 CC="$CC" CXX="$CXX" CPPFLAGS="$FLAGS"
+          "$CC" $FLAGS -std=c99 -Wall -Wextra -Werror -Ipce-upstream/libretro-common/include \
+            cores/pce-fast-pico/pce_adapter.c cores/pce-fast-pico/smoke.c \
+            "$PWD/pce-upstream/mednafen_pce_fast_libretro.so" -Wl,-rpath,"$PWD/pce-upstream" -o /tmp/pce-smoke
+          if [ "$ARCH" = host ]; then
+            timeout 45s /tmp/pce-smoke
+          else
+            arm-linux-gnueabi-readelf -h /tmp/pce-smoke
+            timeout 90s qemu-arm -L /usr/arm-linux-gnueabi /tmp/pce-smoke
+          fi
+  native-objects:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: libretro/beetle-pce-fast-libretro
+          ref: 4cf066e22533186d0cfad85a0fec2aced93e4e29
+          path: pce-upstream
+          persist-credentials: false
+      - name: Install bare-metal ARM compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+      - name: Compile core objects (no LK link yet)
+        run: |
+          set -eu
+          FLAGS="-march=armv7-a -mfloat-abi=soft -marm -ffreestanding -fno-common -ffunction-sections -fdata-sections -D__STDC_FORMAT_MACROS=1 -D__STDC_LIMIT_MACROS=1"
+          make -C pce-upstream -j2 platform=unix STATIC_LINKING=1 TARGET=pce-native.a HAVE_CDROM=0 HAVE_CHD=0 NEED_TREMOR=0 \
+            CC=arm-none-eabi-gcc CXX=arm-none-eabi-g++ AR=arm-none-eabi-ar CPPFLAGS="$FLAGS"
+          arm-none-eabi-gcc $FLAGS -std=c99 -Wall -Wextra -Werror -Ipce-upstream/libretro-common/include \
+            -c cores/pce-fast-pico/pce_adapter.c -o /tmp/pce-adapter.o
+          arm-none-eabi-nm -u pce-upstream/pce-native.a > /tmp/pce-native-undefined.txt
+          arm-none-eabi-size /tmp/pce-adapter.o
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PCE-native-symbol-inventory-NOT-A-BLOB
+          path: /tmp/pce-native-undefined.txt
+          if-no-files-found: error

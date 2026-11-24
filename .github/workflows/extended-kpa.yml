@@ -7,6 +7,7 @@ on:
       - '.github/workflows/extended-kpa.yml'
       - '.gitmodules'
       - 'cores/**'
+      - '!cores/pce-fast-pico/**'
       - 'emu/**'
       - 'tools/**'
       - 'build_konkr_kpa.sh'
