@@ -42,7 +42,7 @@ jobs:
             CXX=arm-linux-gnueabi-g++
             FLAGS="-march=armv7-a -mfloat-abi=soft -marm"
           fi
-          make -C pce-upstream -j2 platform=unix HAVE_CDROM=0 HAVE_CHD=0 NEED_TREMOR=0 CC="$CC" CXX="$CXX" CPPFLAGS="$FLAGS"
+          make -C pce-upstream -j2 platform=unix HAVE_CDROM=0 HAVE_CHD=0 NEED_TREMOR=1 CC="$CC" CXX="$CXX" CPPFLAGS="$FLAGS"
           "$CC" $FLAGS -std=c99 -Wall -Wextra -Werror -Ipce-upstream/libretro-common/include \
             cores/pce-fast-pico/pce_adapter.c cores/pce-fast-pico/smoke.c \
             "$PWD/pce-upstream/mednafen_pce_fast_libretro.so" -Wl,-rpath,"$PWD/pce-upstream" -o /tmp/pce-smoke
@@ -70,13 +70,8 @@ jobs:
       - name: Compile core objects (no LK link yet)
         run: |
           set -eu
-          FLAGS="-march=armv7-a -mfloat-abi=soft -marm -ffreestanding -fno-common -ffunction-sections -fdata-sections -D__STDC_FORMAT_MACROS=1 -D__STDC_LIMIT_MACROS=1"
-          make -C pce-upstream -j2 platform=unix STATIC_LINKING=1 TARGET=pce-native.a HAVE_CDROM=0 HAVE_CHD=0 NEED_TREMOR=0 \
-            CC=arm-none-eabi-gcc CXX=arm-none-eabi-g++ AR=arm-none-eabi-ar CPPFLAGS="$FLAGS"
-          arm-none-eabi-gcc $FLAGS -std=c99 -Wall -Wextra -Werror -Ipce-upstream/libretro-common/include \
-            -c cores/pce-fast-pico/pce_adapter.c -o /tmp/pce-adapter.o
-          arm-none-eabi-nm -u pce-upstream/pce-native.a > /tmp/pce-native-undefined.txt
-          arm-none-eabi-size /tmp/pce-adapter.o
+          bash cores/pce-fast-pico/native_objects.sh pce-upstream "$RUNNER_TEMP/pce-native"
+          cp "$RUNNER_TEMP/pce-native/undefined.txt" /tmp/pce-native-undefined.txt
       - uses: actions/upload-artifact@v4
         with:
           name: PCE-native-symbol-inventory-NOT-A-BLOB

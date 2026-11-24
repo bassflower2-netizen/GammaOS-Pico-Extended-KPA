@@ -30,7 +30,9 @@ static bool env(unsigned cmd,void *data)
     case RETRO_ENVIRONMENT_GET_VARIABLE: {
         struct retro_variable *v=data;
         v->value=NULL;
-        /* Default core options for the first probe, no filesystem options. */
+        /* Explicit nonzero turbo delay and disable turbo toggling in probe. */
+        if(!strcmp(v->key,"pce_fast_turbo_delay")){v->value="3";return true;}
+        if(!strcmp(v->key,"pce_fast_turbo_toggling")){v->value="disabled";return true;}
         return false;
     }
     case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS:
