@@ -14,3 +14,6 @@ Build correction: native newlib format definitions reuse the type-checked Handy 
 
 ## Stage 2: flat ARM HuCard blob
 The native object probe passed on 41a73db. This stage links the full core against newlib and a private 8 MiB heap with explicit file-access rejection. It tests the native ELF and then the exact flat image mapped at the existing 16 MiB emulator overlay (0x4F000000). The same synthetic ROM/save-state test runs through the export table. Linux syscalls are confined to the test executable. No LK loader, menu, SD persistence, or CD support yet. The output is experimental until CI and physical hardware verification.
+
+## Stage 3: HuCard LK session
+The successful flat test at d21289b is used as the basis for the new LK session. System ID 10 is reserved for PC Engine. The dedicated session owns the existing emulator overlay and sixth thread-stack slot. Its save paths are independent. Scanner and menu exposure follow separately. Hardware testing remains deferred. No rewind, cheats, achievements or FF in the initial driver.

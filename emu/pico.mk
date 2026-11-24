@@ -42,6 +42,9 @@ OBJS += emu/genesis/genesis_sd_run.o
 OBJS += emu/nes/nes_core_loader.o
 OBJS += emu/nes/nes_sd_run.o
 OBJS += emu/lynx/handy_core_loader.o emu/lynx/handy_sd_run.o
+OBJS += emu/pce/pce_core_loader.o emu/pce/pce_sd_run.o
+$(BUILDDIR)/emu/pce/pce_core_loader.o: CFLAGS += -Os
+$(BUILDDIR)/emu/pce/pce_sd_run.o: CFLAGS += -Os
 $(BUILDDIR)/emu/lynx/handy_sd_run.o: CFLAGS += -Os
 $(BUILDDIR)/emu/lynx/handy_core_loader.o: CFLAGS += -Os
 # SNES-Classic-mini-style carousel menu engine (imported from lk-snes-menu). The

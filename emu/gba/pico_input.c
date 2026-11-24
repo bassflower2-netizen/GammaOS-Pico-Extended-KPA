@@ -234,6 +234,15 @@ static const struct pi_job k_lynx[] = {
     { "save", "Save state", J_HOT, PH_SAVE, NB }, { "load", "Load state", J_HOT, PH_LOAD, NB },
     { "restart", "Reset Game", J_HOT, PH_RESTART, NB }, { "menu", "Open the menu", J_HOT, PH_MENU, NB },
 };
+static const struct pi_job k_pce[] = {
+    { "a", "I", J_IN, PJ_A, PB_A }, { "b", "II", J_IN, PJ_B, PB_B },
+    { "y", "III", J_IN, PJ_Y, PB_Y }, { "x", "IV", J_IN, PJ_X, PB_X },
+    { "l", "V", J_IN, PJ_L, PB_L }, { "r", "VI", J_IN, PJ_R, PB_R },
+    { "start", "Run", J_IN, PJ_START, PB_START }, { "select", "Select", J_IN, PJ_SELECT, PB_SELECT },
+    DPAD,
+    { "save", "Save state", J_HOT, PH_SAVE, NB }, { "load", "Load state", J_HOT, PH_LOAD, NB },
+    { "restart", "Reset Game", J_HOT, PH_RESTART, NB }, { "menu", "Open the menu", J_HOT, PH_MENU, NB },
+};
 static const struct pi_job k_snes[] = {
 	{ "a", "A", J_IN, PJ_A, PB_A }, { "b", "B", J_IN, PJ_B, PB_B },
 	{ "x", "X", J_IN, PJ_X, PB_X }, { "y", "Y", J_IN, PJ_Y, PB_Y },
@@ -296,6 +305,7 @@ static const char *sys_tok(int system)
 	case GBA_CONSOLE_SG: return "sg";
 	case GBA_CONSOLE_NES: return "nes";
 	case GBA_CONSOLE_LYNX: return "lynx";
+	case GBA_CONSOLE_PCE: return "pce";
 	default: return 0;
 	}
 }
@@ -309,6 +319,7 @@ static void jobs_of(int system, const struct pi_job **job, int *nj)
 	case GBA_CONSOLE_SMS: case GBA_CONSOLE_GG: case GBA_CONSOLE_SG: USE(k_sms); break;
 	case GBA_CONSOLE_NES: USE(k_nes); break;
 	case GBA_CONSOLE_LYNX: USE(k_lynx); break;
+	case GBA_CONSOLE_PCE: USE(k_pce); break;
 	default: USE(k_gba); break;
 	}
 #undef USE
