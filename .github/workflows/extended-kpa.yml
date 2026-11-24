@@ -1,0 +1,48 @@
+name: Extended KPA baseline build
+on:
+  workflow_dispatch:
+  push:
+    branches: [extended/lynx]
+    paths:
+      - '.github/workflows/extended-kpa.yml'
+      - '.gitmodules'
+      - 'cores/**'
+      - 'emu/**'
+      - 'tools/**'
+      - 'build_konkr_kpa.sh'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install toolchains and asset dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y make python3 python-is-python3 python3-pil python3-fonttools python3-numpy openssl ca-certificates libc6:i386 lib32z1 lib32stdc++6 gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-dev libstdc++-arm-none-eabi-newlib
+      - name: Build KPA bootloader and SD card
+        run: bash build_konkr_kpa.sh
+      - name: Validate complete baseline output
+        run: |
+          set -eu
+          test -s out/lk_a_kpa_signed.img
+          test -s out/sdcard/gammaos/menu.pack
+          test -s out/sdcard/gammaos/current-960x640.pack
+          test -s out/sdcard/gammaos/current-igm-960x640.pack
+          test -s out/sdcard/gammaos/names.pack
+          test -s out/sdcard/bios/certs/roots.der
+          for core in armgba-pico gpsp-pico gambatte-pico snes9x-pico armsnes-pico genesis-plus-gx-pico armnes-pico ra-pico; do
+            test -s "out/sdcard/cores/$core.blob"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Extended-KPA-BASELINE-UNTESTED
+          path: |
+            out/lk_a_kpa_signed.img
+            out/sdcard/
+          if-no-files-found: error
