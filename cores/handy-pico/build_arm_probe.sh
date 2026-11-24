@@ -9,9 +9,13 @@ mkdir -p "$OUT"
 OUT="$(realpath "$OUT")"
 CC=arm-none-eabi-gcc
 CXX=arm-none-eabi-g++
-FLAGS=(-march=armv7-a -mfloat-abi=soft -marm -mthumb-interwork -ffreestanding -fno-common -fno-short-enums -ffunction-sections -fdata-sections -Os)
+# newlib's C++ inttypes.h may be included before libretro's header.
+# Define the standard macro opt-ins at the compiler command line.
+FLAGS=(-D__STDC_FORMAT_MACROS=1 -D__STDC_LIMIT_MACROS=1 -D__STDC_CONSTANT_MACROS=1 -march=armv7-a -mfloat-abi=soft -marm -mthumb-interwork -ffreestanding -fno-common -fno-short-enums -ffunction-sections -fdata-sections -Os)
 INC=(-I"$UPSTREAM" -I"$UPSTREAM/lynx" -I"$UPSTREAM/libretro" -I"$UPSTREAM/libretro-common/include")
 CORE_FLAGS=(-DFRONTEND_SUPPORTS_RGB565 -DWANT_CRC32 -DHAVE_NO_LANGEXTRA -DNDEBUG)
+# Fail early if the toolchain has not exposed the integer formatting macros.
+printf '#include <inttypes.h>\n#ifndef PRId64\n#error PRId64 missing\n#endif\n' | "$CXX" "${FLAGS[@]}" -std=gnu++11 -x c++ -E - >/dev/null
 OBJS=()
 for src in lynx/lynxdec.cpp lynx/cart.cpp lynx/memmap.cpp lynx/mikie.cpp lynx/ram.cpp lynx/rom.cpp lynx/susie.cpp lynx/system.cpp lynx/eeprom.cpp libretro/libretro.cpp blip/Blip_Buffer.cpp blip/Stereo_Buffer.cpp; do
     obj="$OUT/${src//\//_}.o"
