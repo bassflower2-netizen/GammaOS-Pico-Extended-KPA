@@ -54,11 +54,13 @@ int main(void)
     const struct handy_blob_exports *api = init();
     assert(api && api->magic == HANDY_BLOB_MAGIC && api->version == HANDY_BLOB_VERSION);
     struct handy_pico_callbacks cb = {video,audio};
+    void *cold_state=NULL; size_t cold_size=0;
     for (unsigned session=0; session<2; ++session) {
         assert(api->open(rom, sizeof rom, &cb) == 0);
         assert(api->ram_size() == 65536);
         uint8_t *ram = api->ram();
         assert(ram && !memcmp(ram+0x2000,rom,sizeof rom));
+        if(session) { assert(cold_size==api->state_size()); assert(api->load(cold_state,cold_size)==0); assert(ram[0x1000]==0x42); free(cold_state); }
         for (unsigned i=0;i<8;++i) assert(api->frame(i&1 ? 1u<<RETRO_DEVICE_ID_JOYPAD_A:0) == 0);
         api->reset();
         assert(api->frame(0)==0);
@@ -70,7 +72,7 @@ int main(void)
         assert(api->save(state,n)==0);
         ram[0x1000]=0x99;
         assert(api->load(state,n)==0 && ram[0x1000]==0x42);
-        free(state);
+        if(!session) { cold_state=state; cold_size=n; } else free(state);
         api->close();
         assert(!api->ram() && !api->state_size());
     }

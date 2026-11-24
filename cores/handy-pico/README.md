@@ -23,3 +23,6 @@ Strict complete headered LNX cartridges and validated BS93 homebrew are accepted
 
 ## Stage 5: LK loader and SD packaging
 A read-only header check is exposed by existing oem cardcores. The LK loader uses the existing cache-maintained core_file_load path, but is not called until a dedicated session owns the shared overlay. CI compiles the loader and includes the exact QEMU-tested ABI 2 blob in the SD image. The ROM scanner and both menus remain unchanged; no Lynx launches yet. Do not flash this experimental package before integration and hardware-test instructions.
+
+## Stage 6: session driver (still hidden from the ROM library)
+The LK now has an exclusive Lynx worker thread in the fifth existing stack slot and dispatches reserved system ID 9. It uses the existing display/audio pipeline, input mapping, Current/Classic in-game menu with fallback, three state slots and separate EEPROM files. The scanner does not produce ID 9 yet. The 75 Hz panel target, physical buttons, display, power handling and SD writes require hardware verification. The first driver does not implement netplay, cheats, achievements, rewind or fast-forward. Aspect/filter settings are session-local. CI extends the flat blob test to load a same-ROM state after close/reopen; this is not a guarantee of portability across versions or all cartridges.

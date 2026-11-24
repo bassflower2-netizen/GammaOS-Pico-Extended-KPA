@@ -63,6 +63,7 @@ jobs:
           set -eu
           test -s out/lk_a_kpa_signed.img
           test -s build-k85v1_64_kpa/emu/lynx/handy_core_loader.o
+          test -s build-k85v1_64_kpa/emu/lynx/handy_sd_run.o
           cmp "$RUNNER_TEMP/handy-arm-probe/handy-pico.blob" out/sdcard/cores/handy-pico.blob
           test ! -d out/sdcard/roms/lynx
           test -s out/sdcard/gammaos/menu.pack
@@ -75,7 +76,7 @@ jobs:
           done
       - uses: actions/upload-artifact@v4
         with:
-          name: Extended-KPA-LYNX-LOADER-UNTESTED
+          name: Extended-KPA-LYNX-SESSION-UNTESTED
           path: |
             out/lk_a_kpa_signed.img
             out/sdcard/

@@ -10,7 +10,7 @@
 
 #include <kernel/thread.h>
 
-enum { EMU_STACK_GBC, EMU_STACK_SNES, EMU_STACK_GENESIS, EMU_STACK_NES };
+enum { EMU_STACK_GBC, EMU_STACK_SNES, EMU_STACK_GENESIS, EMU_STACK_NES, EMU_STACK_LYNX };
 
 extern void *ayaneo_emu_stack(unsigned int slot, unsigned int size);
 

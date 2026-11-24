@@ -2338,6 +2338,7 @@ static int s_nrom;
 extern void gbc_sd_session(fat_vol *vol, const gba_rom_entry *rom);
 extern void snes_sd_session(fat_vol *vol, const gba_rom_entry *rom);   /* snes9x via boot_b blob */
 extern void genesis_sd_session(fat_vol *vol, const gba_rom_entry *rom); /* Genesis-Plus-GX (MD/SMS/GG/SG) blob */
+extern void handy_sd_session(fat_vol *vol, const gba_rom_entry *rom);
 extern void nes_sd_session(fat_vol *vol, const gba_rom_entry *rom);     /* armNES (NES, Famicom, Disk System) blob */
 static int s_gpsp_dirty;
 
@@ -2464,6 +2465,7 @@ const char *gba_state_dir_of(int system)
 		return snes_core_state_dir(snes_core_next_armsnes(&s_sd_vol));
 	}
 	case GBA_CONSOLE_NES: return "/states/nes";
+	case GBA_CONSOLE_LYNX: return "/states/lynx";
 	default: return "/states/genesis";   /* Mega Drive, Master System, Game Gear, SG-1000 */
 	}
 }
@@ -3714,6 +3716,11 @@ static int emu_thread(void *arg)
 						s_gpsp_dirty = 1;
 						continue;
 					}
+					if (s_roms[sel].type == GBA_CONSOLE_LYNX) {
+						handy_sd_session(&s_sd_vol, &s_roms[sel]);
+						s_gpsp_dirty = 1;
+						continue;
+					}
 					if (s_roms[sel].type == GBA_CONSOLE_NES) {
 						nes_sd_session(&s_sd_vol, &s_roms[sel]);  /* NES, Famicom, Disk System via armNES */
 						s_gpsp_dirty = 1;
@@ -4185,6 +4192,11 @@ static int emu_thread(void *arg)
 						s_sel_rom = sel;
 						if (s_roms[sel].type == GBA_CONSOLE_SNES) {
 							snes_sd_session(&s_sd_vol, &s_roms[sel]);
+							s_gpsp_dirty = 1;
+							continue;
+						}
+						if (s_roms[sel].type == GBA_CONSOLE_LYNX) {
+							handy_sd_session(&s_sd_vol, &s_roms[sel]);
 							s_gpsp_dirty = 1;
 							continue;
 						}
