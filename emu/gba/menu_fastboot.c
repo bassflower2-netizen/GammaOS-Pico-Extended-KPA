@@ -387,6 +387,8 @@ static void cmd_diag(const char *arg, void *data, unsigned sz)
  * version, image and total size). Reads 20 bytes per file; nothing is loaded or run. */
 static void cmd_cores(const char *arg, void *data, unsigned sz)
 {
+	extern int handy_core_check(fat_vol *v);
+	extern const char *core_file_error(int err);
 	extern void *gba_sd_menu_vol(void);   /* the mounted card (fat_vol *), 0 outside SD mode */
 	static const char *const paths[] = { "/cores/armgba-pico.blob", "/cores/gpsp-pico.blob",
 		"/cores/gambatte-pico.blob", "/cores/snes9x-pico.blob", "/cores/armsnes-pico.blob",
@@ -404,6 +406,8 @@ static void cmd_cores(const char *arg, void *data, unsigned sz)
 		}
 		fastboot_info(lbuf);
 	}
+	snprintf(lbuf, sizeof lbuf, "handy-pico.blob: %s (header check only)", core_file_error(handy_core_check(v)));
+	fastboot_info(lbuf);
 	fastboot_okay("");
 }
 

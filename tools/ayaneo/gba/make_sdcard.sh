@@ -95,6 +95,11 @@ if (cd "$ROOT/cores/ra-pico" && ./build.sh >/dev/null 2>&1); then
 else
 	echo "!! ra-pico: build.sh failed (run it in cores/ra-pico to see why)" >&2
 fi
+# Experimental Handy is built and tested separately. Explicit opt-in only.
+if [ -n "${HANDY_BLOB:-}" ]; then
+    [ -s "$HANDY_BLOB" ] || { echo "!! HANDY_BLOB missing" >&2; exit 1; }
+    CORE_ARGS+=(--core "handy-pico=$HANDY_BLOB")
+fi
 python3 tools/ayaneo/gba/build_sdcard.py out/snes_pack.bin out/sdcard "${CORE_ARGS[@]}"
 
 # HTTPS's trusted roots for the consoles with Wi-Fi (pico_tls): this PC's root bundle as DER. The LK

@@ -41,6 +41,8 @@ OBJS += emu/genesis/genesis_core_loader.o
 OBJS += emu/genesis/genesis_sd_run.o
 OBJS += emu/nes/nes_core_loader.o
 OBJS += emu/nes/nes_sd_run.o
+OBJS += emu/lynx/handy_core_loader.o
+$(BUILDDIR)/emu/lynx/handy_core_loader.o: CFLAGS += -Os
 # SNES-Classic-mini-style carousel menu engine (imported from lk-snes-menu). The
 # software renderer is float-heavy, so build the render/scene/audio modules with
 # hardware NEON FP (LK default -mfloat-abi=soft would make every op an aeabi call).

@@ -20,3 +20,6 @@ remain mandatory. The blob is intentionally not copied to the firmware SD packag
 
 ## Stage 4: cartridge / BIOS / EEPROM bridge (ABI 2)
 Strict complete headered LNX cartridges and validated BS93 homebrew are accepted. Raw LYX, headerless Howard-loader cartridges and unsupported header types are deliberately rejected until separately tested. The optional 512-byte BIOS is copied and checked by upstream CRC; a bad BIOS selects HLE fallback. No BIOS is distributed. EEPROM up to 2048 bytes is copied in and exported by ABI 2 for the frontend to persist. The ARM build uses marked copies of two upstream files to flush EEPROM and read the full size. Synthetic tests check malformed inputs, bad BIOS rejection and a 2048-byte EEPROM round-trip. They do not prove commercial cartridge gameplay or actual SD persistence. No bootloader/menu integration yet.
+
+## Stage 5: LK loader and SD packaging
+A read-only header check is exposed by existing oem cardcores. The LK loader uses the existing cache-maintained core_file_load path, but is not called until a dedicated session owns the shared overlay. CI compiles the loader and includes the exact QEMU-tested ABI 2 blob in the SD image. The ROM scanner and both menus remain unchanged; no Lynx launches yet. Do not flash this experimental package before integration and hardware-test instructions.

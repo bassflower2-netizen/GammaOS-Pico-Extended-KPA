@@ -23,12 +23,14 @@ CORE_MAGIC = {
     "snes9x-pico": 0x31534E53, "armsnes-pico": 0x31534E53, "genesis-plus-gx-pico": 0x31474553,
     "armnes-pico": 0x3153454E,
     "ra-pico": 0x31414152,
+    "handy-pico": 0x31584e4c,
 }
 # the DRAM slot each core loads into (core_file_load's slot_size)
 CORE_SLOT = {
     "armgba-pico": 0x400000, "gpsp-pico": 0x400000, "gambatte-pico": 0x800000,
     "snes9x-pico": 0x800000, "genesis-plus-gx-pico": 0x800000, "armnes-pico": 0x800000,
     "armsnes-pico": 0x1000000,  # the SNES slot and the Genesis one after it (snes_core_loader.c)
+    "handy-pico": 0x1000000, # experimental armSNES overlay
     "ra-pico": 0x100000,     # RetroAchievements: the image's part of its 4 MB (the rest is its heap)
 }
 ROM_DIRS = ["gb", "gbc", "gba", "snes", "genesis", "sms", "gg", "sg", "nes"]
@@ -58,6 +60,8 @@ def check_core(name, data):
     magic, ver, entry, load, span = struct.unpack("<5I", data[:20])
     if magic != CORE_MAGIC[name]:
         sys.exit("%s: magic 0x%08x, expected 0x%08x" % (name, magic, CORE_MAGIC[name]))
+    if name == "handy-pico" and (ver != 2 or entry % 4 or load != len(data)):
+        sys.exit("handy-pico: expected complete ABI 2 image and aligned entry")
     # the LK accepts a file up to 16 bytes short of the load size (the dropped end pad)
     if not (20 <= entry < load <= span <= CORE_SLOT[name]) or len(data) + 16 < load:
         sys.exit("%s: header sizes do not fit (entry 0x%x load 0x%x span 0x%x file 0x%x slot 0x%x)" %
@@ -90,6 +94,11 @@ def main():
         f.write(BOOT_CFG)
     with open(os.path.join(a.out, "bios", "README.txt"), "w", newline="\n") as f:
         f.write(BIOS_README)
+    # Do not create a visible Lynx ROM directory yet; no game dispatcher exists.
+    if any(spec.startswith("handy-pico=") for spec in a.core):
+        with open(os.path.join(a.out, "bios", "README.txt"), "a", newline="\n") as f:
+            f.write("\nExperimental Handy core: future optional lynxboot.img (512 bytes, not included).\n"
+                    "Lynx launches are not enabled in this build.\n")
     for spec in a.core:
         name, _, path = spec.partition("=")
         data = open(path, "rb").read()

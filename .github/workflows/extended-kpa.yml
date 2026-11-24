@@ -1,4 +1,4 @@
-name: Extended KPA baseline build
+name: Extended KPA integration build
 on:
   workflow_dispatch:
   push:
@@ -10,8 +10,7 @@ on:
       - 'emu/**'
       - 'tools/**'
       - 'build_konkr_kpa.sh'
-      # Experimental core has its own CI; baseline runs when LK or packaging changes.
-      - '!cores/handy-pico/**'
+      # The complete integration package now requires the tested Handy blob.
 permissions:
   contents: read
 jobs:
@@ -23,11 +22,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          repository: libretro/libretro-handy
+          ref: bc55d462f0b2d6b073ea93dc552ebd73cec60fd1
+          path: handy-upstream
+          persist-credentials: false
       - name: Install toolchains and asset dependencies
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y make python3 python-is-python3 python3-pil python3-fonttools python3-numpy python3-cairosvg python3-venv openssl ca-certificates libc6:i386 lib32z1 lib32stdc++6 gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-dev libstdc++-arm-none-eabi-newlib binutils-arm-none-eabi patch
+          sudo apt-get install -y make python3 python-is-python3 python3-pil python3-fonttools python3-numpy python3-cairosvg python3-venv openssl ca-certificates libc6:i386 lib32z1 lib32stdc++6 gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-dev libstdc++-arm-none-eabi-newlib binutils-arm-none-eabi patch qemu-user
           arm-none-eabi-gcc --version
           arm-none-eabi-g++ --version
           /usr/bin/python3 -m venv --system-site-packages "$RUNNER_TEMP/pico-python"
@@ -49,12 +54,17 @@ jobs:
             echo "::endgroup::"
           done
           exit "$failed"
+      - name: Build and test exact Handy blob for the SD package
+        run: bash cores/handy-pico/build_arm_probe.sh handy-upstream "$RUNNER_TEMP/handy-arm-probe"
       - name: Build KPA bootloader and SD card
-        run: bash build_konkr_kpa.sh
+        run: HANDY_BLOB="$RUNNER_TEMP/handy-arm-probe/handy-pico.blob" bash build_konkr_kpa.sh
       - name: Validate complete baseline output
         run: |
           set -eu
           test -s out/lk_a_kpa_signed.img
+          test -s build-k85v1_64_kpa/emu/lynx/handy_core_loader.o
+          cmp "$RUNNER_TEMP/handy-arm-probe/handy-pico.blob" out/sdcard/cores/handy-pico.blob
+          test ! -d out/sdcard/roms/lynx
           test -s out/sdcard/gammaos/menu.pack
           test -s out/sdcard/gammaos/current-960x640.pack
           test -s out/sdcard/gammaos/current-igm-960x640.pack
@@ -65,7 +75,7 @@ jobs:
           done
       - uses: actions/upload-artifact@v4
         with:
-          name: Extended-KPA-BASELINE-UNTESTED
+          name: Extended-KPA-LYNX-LOADER-UNTESTED
           path: |
             out/lk_a_kpa_signed.img
             out/sdcard/

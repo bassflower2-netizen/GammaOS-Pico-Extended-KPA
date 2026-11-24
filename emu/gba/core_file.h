@@ -19,6 +19,7 @@
 #define CORE_PATH_ARMSNES  "/cores/armsnes-pico.blob"
 #define CORE_PATH_GENESIS  "/cores/genesis-plus-gx-pico.blob"
 #define CORE_PATH_NES      "/cores/armnes-pico.blob"
+#define CORE_PATH_HANDY    "/cores/handy-pico.blob"
 
 enum {
 	CORE_FILE_OK = 0,
