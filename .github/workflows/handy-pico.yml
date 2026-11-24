@@ -36,3 +36,7 @@ jobs:
             -ffreestanding -fno-builtin -Wall -Wextra -Werror -Os \
             -Ihandy-upstream/libretro-common/include -c cores/handy-pico/handy_adapter.c -o /tmp/handy-adapter.o
           arm-none-eabi-readelf -h /tmp/handy-adapter.o
+      - name: Link and execute full native ARM core (QEMU probe)
+        run: |
+          sudo apt-get install -y qemu-user libstdc++-arm-none-eabi-dev
+          bash cores/handy-pico/build_arm_probe.sh handy-upstream "$RUNNER_TEMP/handy-arm-probe"

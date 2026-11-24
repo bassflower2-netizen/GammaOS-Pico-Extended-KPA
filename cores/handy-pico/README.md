@@ -5,3 +5,7 @@ Upstream: https://github.com/libretro/libretro-handy at bc55d462f0b2d6b073ea93dc
 This is a portable adapter for the upstream libretro core, **not** an LK-loadable blob. The independent CI runs a synthetic homebrew ROM on Linux, checks memory-backed loading, video/audio callbacks, input, reset, and same-session state round-trip, and cross-compiles the adapter for ARMv7-A soft float. No commercial ROM or BIOS is included.
 
 Next: replace upstream VFS and libc/heap dependencies with LK-safe implementations, provide an explicit BIOS and EEPROM buffer contract, allocate a verified DRAM slot and stack, build and validate a flat blob, then wire the driver, ROM scanning, both menu families, saves, rotation, timing and controller settings. Upstream declares single-session serialization; persistence across cold boots needs separate investigation. No original system or menu is modified by this stage.
+
+## Stage 2: native ARM probe
+
+`build_arm_probe.sh` compiles all Handy C++ emulation sources and the adapter with the ARMv7-A soft-float ABI, links them statically with newlib and a bounded test heap, and runs the same synthetic smoke test via qemu-arm. The file/VFS functions explicitly reject filesystem operations. Only the test executable's separate qemu_entry.c uses Linux syscalls (stdout/stderr and exit); that file must never be included in a bootloader blob. This is not yet a verified bootloader memory map, real BIOS/EEPROM support, or a deployable .blob. CI results determine whether this experimental probe actually works.
