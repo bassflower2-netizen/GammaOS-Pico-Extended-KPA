@@ -20,4 +20,9 @@ void *pce_pico_ram(void);
 size_t pce_pico_ram_size(void);
 void *pce_pico_bram(void);
 size_t pce_pico_bram_size(void);
+#ifdef PCE_NATIVE_CD
+#include "pce_cd_io.h"
+/* Experimental native CD entry, not yet exported by the ABI 1 blob. */
+int pce_pico_open_cd(const char *,const struct pce_cd_io *,const struct pce_pico_callbacks *);
+#endif
 #endif

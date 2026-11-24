@@ -23,6 +23,13 @@ LINK=(-nostartfiles -static -Wl,--gc-sections -Wl,--no-undefined)
 test -z "$(arm-none-eabi-nm -u "$OUT/pce-arm.elf")"
 arm-none-eabi-size "$OUT/pce-arm.elf"
 timeout 90s qemu-arm "$OUT/pce-arm.elf"
+# Explicit opt-in CD test until ABI 2 is integrated. ABI 1 HuCard blob unchanged.
+if [ "${PCE_CD_PROBE:-0}" = 1 ]; then
+    "$CC" "${FLAGS[@]}" "${INC[@]}" -I"$UPSTREAM" -std=gnu99 -DPCE_NATIVE_CD -c "$HERE/cd_smoke.c" -o "$OUT/cd-smoke.o"
+    "$CC" "${FLAGS[@]}" "${LINK[@]}" -Wl,-e,probe_start "${CORE[@]}" "$OUT/cd-smoke.o" "$OUT/qemu.o" "${LIBS[@]}" -o "$OUT/pce-cd-arm.elf"
+    test -z "$(arm-none-eabi-nm -u "$OUT/pce-cd-arm.elf")"
+    timeout 90s qemu-arm "$OUT/pce-cd-arm.elf"
+fi
 compile "$HERE/blob_entry.c" "$OUT/entry.o"
 "$CC" "${FLAGS[@]}" "${LINK[@]}" -Wl,-T,"$HERE/blob.ld" -Wl,-Map,"$OUT/pce-blob.map" "${CORE[@]}" "$OUT/entry.o" "${LIBS[@]}" -o "$OUT/pce-blob.elf"
 test -z "$(arm-none-eabi-nm -u "$OUT/pce-blob.elf")"

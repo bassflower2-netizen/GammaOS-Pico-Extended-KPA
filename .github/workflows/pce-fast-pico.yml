@@ -1,4 +1,4 @@
-name: PC Engine HuCard port probes
+name: PC Engine HuCard and CD port probes
 on:
   workflow_dispatch:
   push:
@@ -70,7 +70,7 @@ jobs:
       - name: Link and execute native ARM core and flat blob
         run: |
           set -eu
-          bash cores/pce-fast-pico/build_arm_probe.sh pce-upstream "$RUNNER_TEMP/pce-native"
+          PCE_CD_PROBE=1 bash cores/pce-fast-pico/build_arm_probe.sh pce-upstream "$RUNNER_TEMP/pce-native"
       - uses: actions/upload-artifact@v4
         with:
           name: PCE-fast-EXPERIMENTAL-NOT-FOR-FLASHING

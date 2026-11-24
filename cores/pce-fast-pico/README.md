@@ -20,3 +20,6 @@ The successful flat test at d21289b is used as the basis for the new LK session.
 
 ## Stage 4: visible HuCard integration
 System ID 10, .pce files, independent /saves/pce and /states/pce, Current/Classic artwork, and oem pce diagnostics are now wired. CD games are deliberately not scanned yet. Hardware verification is deferred. The integration build checks that the packaged core matches the exact QEMU-tested blob.
+
+## Stage 5: CD stream probe
+The complete HuCard integration at 9fa60e3 passed CI. A native, read-only file bridge now supports bounded virtual paths, positional file reads, a 4 KiB cache and optional System Card 3 BIOS (256 KiB, optional copier header). A dedicated synthetic fixture tests CUE/MODE1/2048 sector access with non-sequential reads, BIOS absence and path rejection, audio/video, BRAM state restoration and balanced handle closure. It runs the full ARM ELF via QEMU. CD entry is not exported by ABI 1; CD remains disabled in LK and not advertised by the scanner. The fixture BIOS is only a CPU loop, not a real firmware; no commercial content is included. CHD, actual SD FAT callbacks, mixed-mode CD audio and real BIOS/game testing remain outstanding.

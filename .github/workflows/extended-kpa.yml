@@ -7,6 +7,8 @@ on:
       - '.github/workflows/extended-kpa.yml'
       - '.gitmodules'
       - 'cores/**'
+      # CD-only development uses dedicated probes; LK/package changes re-enable integration.
+      - '!cores/pce-fast-pico/**'
       - 'emu/**'
       - 'tools/**'
       - 'build_konkr_kpa.sh'
