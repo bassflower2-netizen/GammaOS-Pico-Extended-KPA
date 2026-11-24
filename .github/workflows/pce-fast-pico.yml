@@ -52,7 +52,7 @@ jobs:
             arm-linux-gnueabi-readelf -h /tmp/pce-smoke
             timeout 90s qemu-arm -L /usr/arm-linux-gnueabi /tmp/pce-smoke
           fi
-  native-objects:
+  native-blob:
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     steps:
@@ -66,14 +66,15 @@ jobs:
       - name: Install bare-metal ARM compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
-      - name: Compile core objects (no LK link yet)
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi qemu-user
+      - name: Link and execute native ARM core and flat blob
         run: |
           set -eu
-          bash cores/pce-fast-pico/native_objects.sh pce-upstream "$RUNNER_TEMP/pce-native"
-          cp "$RUNNER_TEMP/pce-native/undefined.txt" /tmp/pce-native-undefined.txt
+          bash cores/pce-fast-pico/build_arm_probe.sh pce-upstream "$RUNNER_TEMP/pce-native"
       - uses: actions/upload-artifact@v4
         with:
-          name: PCE-native-symbol-inventory-NOT-A-BLOB
-          path: /tmp/pce-native-undefined.txt
+          name: PCE-fast-EXPERIMENTAL-NOT-FOR-FLASHING
+          path: |
+            ${{ runner.temp }}/pce-native/pce-fast-pico.blob
+            ${{ runner.temp }}/pce-native/undefined.txt
           if-no-files-found: error

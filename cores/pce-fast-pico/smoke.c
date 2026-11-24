@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef PCE_FLAT_TEST
+#include "flat_test.h"
+#endif
 static unsigned videos,frames;
 static void video(const uint16_t *p,unsigned w,unsigned h,size_t pitch)
 { assert(w&&h&&w<=1024&&h<=512);if(p)assert(pitch>=w*2);++videos; }
@@ -21,6 +24,9 @@ int main(void)
 {
     static uint8_t rom[8192+512];
     struct pce_pico_callbacks cb={video,audio};
+    #ifdef PCE_FLAT_TEST
+    flat_load();
+    #endif
     make_rom(rom+512);
     assert(pce_pico_frame(0)<0);
     assert(pce_pico_open(rom,512,&cb)<0);

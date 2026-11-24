@@ -11,3 +11,6 @@ Next: resolve native filesystem/libc dependencies, link and execute a flat ARM b
 Known successful Lynx integration baseline: 32fd3b48df82447370a04ac97617b67b928f11aa (CI only, no hardware test). Kids edition is separate.
 
 Build correction: native newlib format definitions reuse the type-checked Handy header, and all ARM objects are combined into one relocatable object before unresolved-symbol inventory. This is still not a native runnable blob.
+
+## Stage 2: flat ARM HuCard blob
+The native object probe passed on 41a73db. This stage links the full core against newlib and a private 8 MiB heap with explicit file-access rejection. It tests the native ELF and then the exact flat image mapped at the existing 16 MiB emulator overlay (0x4F000000). The same synthetic ROM/save-state test runs through the export table. Linux syscalls are confined to the test executable. No LK loader, menu, SD persistence, or CD support yet. The output is experimental until CI and physical hardware verification.
