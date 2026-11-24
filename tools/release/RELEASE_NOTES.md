@@ -50,8 +50,6 @@ Without the card, or after Boot to Android in the menu, Android starts exactly a
 |---|---|
 | ![Netplay from inside a game](https://raw.githubusercontent.com/TheGammaSqueeze/GammaOSPico/main/screenshots/igm-netplay-session.png) | ![Fast Forward Speed](https://raw.githubusercontent.com/TheGammaSqueeze/GammaOSPico/main/screenshots/pico-menu-gameplay-ff.png) |
 | A session started from the game's Netplay page | Fast Forward Speed on the Gameplay page |
-| ![A cartridge crossing](https://raw.githubusercontent.com/TheGammaSqueeze/GammaOSPico/main/screenshots/igm-netplay-progress.png) | |
-| The Netplay page while the other console's cartridge comes over (B cancels) | |
 
 ### Updating
 
