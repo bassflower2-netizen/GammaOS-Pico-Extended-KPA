@@ -28,11 +28,17 @@ Without the card, or after Boot to Android in the menu, Android starts exactly a
   session starts from where both games are, no save going anywhere. **Leave the Session** ends it,
   and each console's game carries on alone; so does the other's when one console leaves or goes out
   of reach. A console in a game and one on the Link screen find each other either way round.
+- **Joining is near instant.** What the two consoles exchange to start a session (each one's game
+  as it stands, and a cartridge the other lacks) now crosses Bluetooth packed: a Game Boy Advance
+  start went from about 15 seconds to well under one, from the Link screen and from the Netplay page
+  alike. When a cartridge has to cross, the Netplay page shows how far it has got and the time left,
+  and B cancels on either console (both games carry on). A console still on 1.1.1 or 1.1.2 links as
+  before, without the packing.
 - **Two different games link with one copy each.** Pokemon Red on one console and Pokemon Green on
   the other (or Ruby and Sapphire, FireRed and LeafGreen) no longer need both games on both cards:
   a console that lacks the other's game gets it over Bluetooth for the session, in memory only, never
-  written to its card. A Game Boy game takes a few seconds; a large GBA game takes minutes the first
-  time (Bluetooth moves about 100 KB a second).
+  written to its card. A Game Boy game takes a second or so, a large GBA game about a minute (it
+  crosses packed, at about 100 KB a second).
 - **Linked Game Boy sessions keep your colours**: the palette you picked for an original Game Boy
   game stays on through a session and after it, where it went grey. And the two consoles' checks
   that they run the same game no longer disagree while an in-game menu is open (a byte of the save
@@ -44,6 +50,8 @@ Without the card, or after Boot to Android in the menu, Android starts exactly a
 |---|---|
 | ![Netplay from inside a game](https://raw.githubusercontent.com/TheGammaSqueeze/GammaOSPico/main/screenshots/igm-netplay-session.png) | ![Fast Forward Speed](https://raw.githubusercontent.com/TheGammaSqueeze/GammaOSPico/main/screenshots/pico-menu-gameplay-ff.png) |
 | A session started from the game's Netplay page | Fast Forward Speed on the Gameplay page |
+| ![A cartridge crossing](https://raw.githubusercontent.com/TheGammaSqueeze/GammaOSPico/main/screenshots/igm-netplay-progress.png) | |
+| The Netplay page while the other console's cartridge comes over (B cancels) | |
 
 ### Updating
 
