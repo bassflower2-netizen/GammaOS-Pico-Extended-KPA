@@ -87,8 +87,8 @@ const char *lui_model_name(int model)
 const char *lui_system_name(int type)
 {
 	static const char *const n[] = { "Game Boy", "Game Boy Color", "Game Boy Advance", "Super Nintendo",
-					 "Genesis", "Master System", "Game Gear", "SG-1000", "NES" };
-	return type >= 0 && type <= 8 ? n[type] : "";
+					 "Genesis", "Master System", "Game Gear", "SG-1000", "NES", "Atari Lynx" };
+	return type >= 0 && type <= 9 ? n[type] : "";
 }
 
 /* the link cable systems: each player runs their own cartridge */

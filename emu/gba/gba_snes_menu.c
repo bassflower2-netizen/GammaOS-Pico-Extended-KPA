@@ -917,16 +917,16 @@ static void art_index(fat_vol *v, const gba_rom_entry *roms, int nrom)
 	struct art_ent *t = (struct art_ent *)ayaneo_import_arena(&sz);
 	uint32_t mask = 1u << 18;
 	char dirs[80][112];
-	int nd = 0, i, j, rd_id[64], home_id[9];
+	int nd = 0, i, j, rd_id[64], home_id[10];
 	if (!t) return;
 	while (mask * sizeof *t > sz) mask >>= 1;
 	memset(t, 0, mask * sizeof *t);
 	mask--;
 	for (i = 0; i < 64; i++) rd_id[i] = -1;
-	for (i = 0; i < 9; i++) home_id[i] = -1;
+	for (i = 0; i < 10; i++) home_id[i] = -1;
 	/* the folders to list, each once: the boxart beside each game folder, and the home ones */
 	for (i = 0; i < nrom; i++) {
-		int d = roms[i].dir < 64 ? roms[i].dir : 0, ty = roms[i].type < 9 ? roms[i].type : 0;
+		int d = roms[i].dir < 64 ? roms[i].dir : 0, ty = roms[i].type < 10 ? roms[i].type : 0;
 		if (rd_id[d] < 0) {
 			char p[112];
 			gba_boxart_dir(&roms[i], p, sizeof p);
@@ -958,7 +958,7 @@ static void art_index(fat_vol *v, const gba_rom_entry *roms, int nrom)
 		}
 	}
 	for (i = 0; i < nrom; i++) {
-		int d = roms[i].dir < 64 ? roms[i].dir : 0, ty = roms[i].type < 9 ? roms[i].type : 0, k, f;
+		int d = roms[i].dir < 64 ? roms[i].dir : 0, ty = roms[i].type < 10 ? roms[i].type : 0, k, f;
 		struct art_ent *x = 0;
 		char nm[288], legacy[128];
 		int other = gba_sd_legacy_own(roms[i].name, legacy, sizeof legacy);
@@ -1062,10 +1062,10 @@ int gba_menu_boxart_load(const gba_rom_entry *roms, int nrom)
 		/* the first games with art of every system, in turn, as many as the slots hold: what
 		 * a library shows when it opens */
 		{
-			int cur[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+			int cur[10] = { 0 };
 			for (got = 0; got < SNES_BOXART_CAP; ) {
 				int took = 0;
-				for (ty = 0; ty < 9 && got < SNES_BOXART_CAP; ty++) {
+				for (ty = 0; ty < 10 && got < SNES_BOXART_CAP; ty++) {
 					while (cur[ty] < nrom && (roms[cur[ty]].type != ty || s_art[cur[ty]].state == ART_NONE))
 						cur[ty]++;
 					if (cur[ty] >= nrom) continue;
@@ -1353,6 +1353,7 @@ static const char *filter_name(int f)
 	case GBA_CONSOLE_GG:      return "Game Gear";
 	case GBA_CONSOLE_SG:      return "SG-1000";
 	case GBA_CONSOLE_NES:     return "NES";
+	case GBA_CONSOLE_LYNX:    return "Atari Lynx";
 	default:                  return "All Systems";
 	}
 }
@@ -1443,14 +1444,14 @@ static void classic_points(snes_menu *m, int vi)
 /* X advances the filter to All or the next system that actually has ROMs (skips empty ones). */
 static void cycle_filter(int full_n)
 {
-	static const signed char ord[10] = { -1, GBA_CONSOLE_GB, GBA_CONSOLE_GBC,
+	static const signed char ord[11] = { -1, GBA_CONSOLE_GB, GBA_CONSOLE_GBC,
 		GBA_CONSOLE_GBA, GBA_CONSOLE_NES, GBA_CONSOLE_SNES, GBA_CONSOLE_GENESIS,
-		GBA_CONSOLE_SMS, GBA_CONSOLE_GG, GBA_CONSOLE_SG };
+		GBA_CONSOLE_SMS, GBA_CONSOLE_GG, GBA_CONSOLE_SG, GBA_CONSOLE_LYNX };
 	int cur = 0, i, s;
-	for (i = 0; i < 10; i++) if (ord[i] == s_sysfilter) { cur = i; break; }
-	for (s = 0; s < 10; s++) {
+	for (i = 0; i < 11; i++) if (ord[i] == s_sysfilter) { cur = i; break; }
+	for (s = 0; s < 11; s++) {
 		int f;
-		cur = (cur + 1) % 10;
+		cur = (cur + 1) % 11;
 		f = ord[cur];
 		if (f < 0) { s_sysfilter = -1; break; }        /* All is always available */
 		{ int j, present = 0;
@@ -1941,6 +1942,7 @@ int gba_snes_menu_run(const gba_rom_entry *roms, int nrom, int start_sel)
 				     snes_res_img(&s_pk, snes_hash("logo_gg")),
 				     snes_res_img(&s_pk, snes_hash("logo_sg")),
 				     snes_res_img(&s_pk, snes_hash("logo_nes")));
+	s_menu.console_logo[9] = snes_res_img(&s_pk, snes_hash("logo_lynx"));
 	snes_menu_set_themes(&s_menu, s_theme_n, s_theme_thumb, s_theme_cur);   /* Display: the Theme row */
 	s_menu.theme_beta = s_theme_beta;
 #if PICO_LINK

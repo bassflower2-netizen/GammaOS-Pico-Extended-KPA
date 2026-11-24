@@ -21,6 +21,7 @@ mkdir -p out
 
 echo ">> Generating GBA cartridge placeholder"
 python3 tools/ayaneo/gba/gen_gba_cart.py out/gba_cart.png
+python3 tools/ayaneo/pico_current/lynx_art.py out/lynx_logo.png
 
 # Menu themes (tools/ayaneo/snes/themes/<name>/): classic first, its atlas is the asset tree's own,
 # then every other theme folder in name order, each with its own UI atlas. Picked on the Display page.
@@ -42,7 +43,8 @@ python3 tools/ayaneo/snes/pack_snes.py "$SNES_ASSETS" out/snes_pack.bin \
 	--logo-sms     tools/ayaneo/snes/logos/sms.png \
 	--logo-gg      tools/ayaneo/snes/logos/gg.png \
 	--logo-sg      tools/ayaneo/snes/logos/sg.png \
-	--logo-nes     tools/ayaneo/snes/logos/nes.png
+	--logo-nes     tools/ayaneo/snes/logos/nes.png \
+	--logo-lynx    out/lynx_logo.png
 
 echo ">> Building the SD card template (out/sdcard)"
 CORE_ARGS=()

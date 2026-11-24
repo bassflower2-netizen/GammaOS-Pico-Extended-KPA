@@ -1,5 +1,5 @@
 /* Experimental Lynx session. Uses existing LK display/audio/IGM infrastructure.
- * The ROM scanner does not advertise this system yet (next integration step).
+ * The ROM scanner dispatches system ID 9 to this session.
  * The session owns the armSNES overlay and the shared emulator scratch arena
  * until all callbacks have ceased and the core has closed. */
 #include <string.h>
@@ -127,9 +127,7 @@ static const char *value(int i,char *buf)
         snprintf(buf,96,"%s",names[(unsigned)g_genesis_aspect<6u?g_genesis_aspect:1]);
     }
     if(i==LM_FILTER) {
-        static const char *const names[]={"Off","LCD","Grid","Scanline","Sharp","Smooth"};
         snprintf(buf,96,"%d",g_genesis_filter);
-        (void)names; /* numerical until the display filter labels are shared */
     }
     return buf;
 }

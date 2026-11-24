@@ -65,7 +65,7 @@ jobs:
           test -s build-k85v1_64_kpa/emu/lynx/handy_core_loader.o
           test -s build-k85v1_64_kpa/emu/lynx/handy_sd_run.o
           cmp "$RUNNER_TEMP/handy-arm-probe/handy-pico.blob" out/sdcard/cores/handy-pico.blob
-          test ! -d out/sdcard/roms/lynx
+          test -d out/sdcard/roms/lynx
           test -s out/sdcard/gammaos/menu.pack
           test -s out/sdcard/gammaos/current-960x640.pack
           test -s out/sdcard/gammaos/current-igm-960x640.pack
@@ -74,9 +74,16 @@ jobs:
           for core in armgba-pico gpsp-pico gambatte-pico snes9x-pico armsnes-pico genesis-plus-gx-pico armnes-pico ra-pico; do
             test -s "out/sdcard/cores/$core.blob" || { echo "::error::Missing core $core"; exit 1; }
           done
+      - name: Check Lynx source integration and asset generation
+        run: |
+          python3 -m py_compile tools/ayaneo/pico_current/lynx_art.py tools/ayaneo/pico_current/build_pack.py tools/ayaneo/snes/pack_snes.py
+          test -s out/lynx_logo.png
+          grep -q 'GBA_CONSOLE_LYNX.*"lynx atarilynx"' emu/gba/sd_fat.c
+          grep -q 'logo_lynx' emu/gba/gba_snes_menu.c
+          grep -q 'Atari Lynx' emu/gba/pico_current.c
       - uses: actions/upload-artifact@v4
         with:
-          name: Extended-KPA-LYNX-SESSION-UNTESTED
+          name: Extended-KPA-LYNX-ALPHA-UNTESTED
           path: |
             out/lk_a_kpa_signed.img
             out/sdcard/

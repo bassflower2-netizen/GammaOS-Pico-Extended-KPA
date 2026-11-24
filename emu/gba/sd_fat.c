@@ -279,6 +279,7 @@ static const struct rom_system {
 	{ GBA_CONSOLE_GG,      "gg gamegear",                        ".gg" },
 	{ GBA_CONSOLE_SG,      "sg sg1000 sg-1000",                  ".sg" },
 	{ GBA_CONSOLE_NES,     "nes famicom fds",                    ".nes .unf .unif .fds" },
+	{ GBA_CONSOLE_LYNX,    "lynx atarilynx",                     ".lnx .o" },
 };
 #define N_SYSTEMS ((int)(sizeof k_systems / sizeof k_systems[0]))
 
@@ -849,6 +850,7 @@ const char *gba_sd_rom_exts(int type)
 /* the most ROM each system's core holds (its loader's buffer) */
 uint32_t gba_sd_rom_cap(int type)
 {
+	if (type == GBA_CONSOLE_LYNX) return (2u << 20) + 64u;
 	return type == GBA_CONSOLE_GBA ? 32u << 20 : 8u << 20;   /* GBA 32 MB; the others 8 MB */
 }
 

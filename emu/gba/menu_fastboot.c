@@ -483,7 +483,7 @@ static void cmd_launch(const char *arg, void *data, unsigned sz)
 	unsigned k = 0;
 	(void)data; (void)sz;
 	static const struct { const char *key; int type; } kinds[] = {
-		{ "nes:", GBA_CONSOLE_NES }, { "snes:", GBA_CONSOLE_SNES }, { "gen:", GBA_CONSOLE_GENESIS },
+		{ "lynx:", GBA_CONSOLE_LYNX }, { "nes:", GBA_CONSOLE_NES }, { "snes:", GBA_CONSOLE_SNES }, { "gen:", GBA_CONSOLE_GENESIS },
 		{ "sms:", GBA_CONSOLE_SMS }, { "gg:", GBA_CONSOLE_GG }, { "gba:", GBA_CONSOLE_GBA },
 		{ "gbc:", GBA_CONSOLE_GBC }, { "gb:", GBA_CONSOLE_GB },
 	};
@@ -1755,6 +1755,15 @@ static void cmd_stacktest(const char *arg, void *data, unsigned sz)
 
 /* `oem nes`: the NES session as it stands (nes_core_loader.c, nes_sd_run.c): the core's load from
  * the card (core_file.h reason), the game's load, Disk System flags, frames, picture and sound */
+static void cmd_lynx(const char *arg, void *data, unsigned sz)
+{
+	extern volatile unsigned g_lynx_frames;
+	extern volatile int g_lynx_loaderr,g_lynx_loadrc;
+	(void)arg; (void)data; (void)sz;
+	snprintf(lbuf,sizeof lbuf,"lynx: core=%d load=%d frames=%u",g_lynx_loaderr,g_lynx_loadrc,g_lynx_frames);
+	fastboot_info(lbuf); fastboot_okay("");
+}
+
 static void cmd_nes(const char *arg, void *data, unsigned sz)
 {
 	extern volatile unsigned g_nes_dbg_loaderr, g_nes_dbg_frames, g_nes_dbg_w, g_nes_dbg_h, g_nes_dbg_sr, g_nes_dbg_vfp;
@@ -3556,6 +3565,7 @@ void gba_menu_fastboot_register(void)
 	fastboot_register("oem trigscan", cmd_trigscan, 1, 0);
 	fastboot_register("oem joytest", cmd_joytest, 1, 0);
 	fastboot_register("oem cardcores", cmd_cores, 1, 0);
+	fastboot_register("oem lynx", cmd_lynx, 1, 0);
 	fastboot_register("oem gen-rw", cmd_gen_rw, 1, 0);
 	fastboot_register("oem gen-bench", cmd_gen_bench, 1, 0);
 	fastboot_register("oem snes-launch", cmd_snes_launch, 1, 0);

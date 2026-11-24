@@ -24,10 +24,11 @@ import argparse, os, struct, zlib
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import fontsrc
+import lynx_art
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ART = os.path.join(HERE, "art")
-SYSTEMS = ["gb", "gbc", "gba", "snes", "genesis", "sms", "gg", "sg", "nes"]
+SYSTEMS = ["gb", "gbc", "gba", "snes", "genesis", "sms", "gg", "sg", "nes", "lynx"]
 T_IMAGE, T_MASK, T_FONT, T_TEXT = 1, 2, 3, 4
 CHARS = [c for c in range(0x20, 0x7F)] + [c for c in range(0xA0, 0x100)] + [0x2022, 0x2026]
 
@@ -206,9 +207,9 @@ def main():
     lib_w = min(uw * .46, 440)
     art_w = min(uw * .34, 393)
     for sname in SYSTEMS:
-        hw = Image.open(os.path.join(ART, "hardware", sname + ".png")).convert("RGBA")
+        hw = lynx_art.hardware() if sname == "lynx" else Image.open(os.path.join(ART, "hardware", sname + ".png")).convert("RGBA")
         pack.image("hw_" + sname, fit(hw, u(hw_w), u(hw_h)))
-        lg = Image.open(os.path.join(ART, "logos", sname + ".png")).convert("RGBA")
+        lg = lynx_art.logo() if sname == "lynx" else Image.open(os.path.join(ART, "logos", sname + ".png")).convert("RGBA")
         pack.mask("logo_" + sname, fit(lg, u(logo_w), u(83)))
         pack.mask("slogo_" + sname, fit(lg, u(strip_w), u(33)))
         pack.mask("llogo_" + sname, fit(lg, u(lib_w), u(58)))
