@@ -1,0 +1,38 @@
+name: Atari Lynx adapter smoke test
+on:
+  workflow_dispatch:
+  push:
+    branches: [extended/lynx]
+    paths:
+      - 'cores/handy-pico/**'
+      - '.github/workflows/handy-pico.yml'
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: libretro/libretro-handy
+          ref: bc55d462f0b2d6b073ea93dc552ebd73cec60fd1
+          path: handy-upstream
+          persist-credentials: false
+      - name: Build upstream host core
+        run: make -C handy-upstream platform=unix -j2
+      - name: Test memory ROM, callbacks, reset and state
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -Ihandy-upstream/libretro-common/include \
+            cores/handy-pico/handy_adapter.c cores/handy-pico/smoke.c \
+            "$PWD/handy-upstream/handy_libretro.so" -Wl,-rpath,"$PWD/handy-upstream" -o /tmp/handy-smoke
+          timeout 30s /tmp/handy-smoke
+      - name: Cross-compile portable adapter for LK calling convention
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+          arm-none-eabi-gcc -std=c99 -march=armv7-a -mfloat-abi=soft -mthumb-interwork \
+            -ffreestanding -fno-builtin -Wall -Wextra -Werror -Os \
+            -Ihandy-upstream/libretro-common/include -c cores/handy-pico/handy_adapter.c -o /tmp/handy-adapter.o
+          arm-none-eabi-readelf -h /tmp/handy-adapter.o
