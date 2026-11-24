@@ -17,3 +17,6 @@ The native object probe passed on 41a73db. This stage links the full core agains
 
 ## Stage 3: HuCard LK session
 The successful flat test at d21289b is used as the basis for the new LK session. System ID 10 is reserved for PC Engine. The dedicated session owns the existing emulator overlay and sixth thread-stack slot. Its save paths are independent. Scanner and menu exposure follow separately. Hardware testing remains deferred. No rewind, cheats, achievements or FF in the initial driver.
+
+## Stage 4: visible HuCard integration
+System ID 10, .pce files, independent /saves/pce and /states/pce, Current/Classic artwork, and oem pce diagnostics are now wired. CD games are deliberately not scanned yet. Hardware verification is deferred. The integration build checks that the packaged core matches the exact QEMU-tested blob.

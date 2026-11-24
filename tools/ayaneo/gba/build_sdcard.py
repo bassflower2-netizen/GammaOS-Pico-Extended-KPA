@@ -24,16 +24,18 @@ CORE_MAGIC = {
     "armnes-pico": 0x3153454E,
     "ra-pico": 0x31414152,
     "handy-pico": 0x31584e4c,
+    "pce-fast-pico": 0x31454350,
 }
 # the DRAM slot each core loads into (core_file_load's slot_size)
 CORE_SLOT = {
     "armgba-pico": 0x400000, "gpsp-pico": 0x400000, "gambatte-pico": 0x800000,
     "snes9x-pico": 0x800000, "genesis-plus-gx-pico": 0x800000, "armnes-pico": 0x800000,
     "armsnes-pico": 0x1000000,  # the SNES slot and the Genesis one after it (snes_core_loader.c)
+    "pce-fast-pico": 0x1000000,
     "handy-pico": 0x1000000, # experimental armSNES overlay
     "ra-pico": 0x100000,     # RetroAchievements: the image's part of its 4 MB (the rest is its heap)
 }
-ROM_DIRS = ["gb", "gbc", "gba", "snes", "genesis", "sms", "gg", "sg", "nes", "lynx"]
+ROM_DIRS = ["gb", "gbc", "gba", "snes", "genesis", "sms", "gg", "sg", "nes", "lynx", "pce"]
 
 BOOT_CFG = ("# GammaOS Pico boot mode for this card.\n"
             "#   boot=sd       start the GammaOS Pico menu from this card\n"
@@ -60,6 +62,8 @@ def check_core(name, data):
     magic, ver, entry, load, span = struct.unpack("<5I", data[:20])
     if magic != CORE_MAGIC[name]:
         sys.exit("%s: magic 0x%08x, expected 0x%08x" % (name, magic, CORE_MAGIC[name]))
+    if name == "pce-fast-pico" and (ver != 1 or entry % 4 or load != len(data)):
+        sys.exit("pce-fast-pico: expected complete ABI 1 image")
     if name == "handy-pico" and (ver != 2 or entry % 4 or load != len(data)):
         sys.exit("handy-pico: expected complete ABI 2 image and aligned entry")
     # the LK accepts a file up to 16 bytes short of the load size (the dropped end pad)
@@ -99,6 +103,9 @@ def main():
         with open(os.path.join(a.out, "bios", "README.txt"), "a", newline="\n") as f:
             f.write("\nAtari Lynx: optional lynxboot.img (512 bytes, not included).\n"
                     "Place complete headered .lnx or BS93 .o homebrew in /roms/lynx. Experimental hardware test.\n")
+    if any(spec.startswith("pce-fast-pico=") for spec in a.core):
+        with open(os.path.join(a.out, "bios", "README.txt"), "a", newline="\n") as f:
+            f.write("\nPC Engine: .pce HuCards in /roms/pce; no BIOS needed. CD games not yet enabled.\n")
     for spec in a.core:
         name, _, path = spec.partition("=")
         data = open(path, "rb").read()

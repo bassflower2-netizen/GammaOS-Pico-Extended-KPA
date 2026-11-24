@@ -388,6 +388,7 @@ static void cmd_diag(const char *arg, void *data, unsigned sz)
 static void cmd_cores(const char *arg, void *data, unsigned sz)
 {
 	extern int handy_core_check(fat_vol *v);
+	extern int pce_core_check(fat_vol *v);
 	extern const char *core_file_error(int err);
 	extern void *gba_sd_menu_vol(void);   /* the mounted card (fat_vol *), 0 outside SD mode */
 	static const char *const paths[] = { "/cores/armgba-pico.blob", "/cores/gpsp-pico.blob",
@@ -407,6 +408,8 @@ static void cmd_cores(const char *arg, void *data, unsigned sz)
 		fastboot_info(lbuf);
 	}
 	snprintf(lbuf, sizeof lbuf, "handy-pico.blob: %s (header check only)", core_file_error(handy_core_check(v)));
+	fastboot_info(lbuf);
+	snprintf(lbuf, sizeof lbuf, "pce-fast-pico.blob: %s (header check only)", core_file_error(pce_core_check(v)));
 	fastboot_info(lbuf);
 	fastboot_okay("");
 }
@@ -483,7 +486,7 @@ static void cmd_launch(const char *arg, void *data, unsigned sz)
 	unsigned k = 0;
 	(void)data; (void)sz;
 	static const struct { const char *key; int type; } kinds[] = {
-		{ "lynx:", GBA_CONSOLE_LYNX }, { "nes:", GBA_CONSOLE_NES }, { "snes:", GBA_CONSOLE_SNES }, { "gen:", GBA_CONSOLE_GENESIS },
+		{ "pce:", GBA_CONSOLE_PCE }, { "lynx:", GBA_CONSOLE_LYNX }, { "nes:", GBA_CONSOLE_NES }, { "snes:", GBA_CONSOLE_SNES }, { "gen:", GBA_CONSOLE_GENESIS },
 		{ "sms:", GBA_CONSOLE_SMS }, { "gg:", GBA_CONSOLE_GG }, { "gba:", GBA_CONSOLE_GBA },
 		{ "gbc:", GBA_CONSOLE_GBC }, { "gb:", GBA_CONSOLE_GB },
 	};
@@ -1755,6 +1758,15 @@ static void cmd_stacktest(const char *arg, void *data, unsigned sz)
 
 /* `oem nes`: the NES session as it stands (nes_core_loader.c, nes_sd_run.c): the core's load from
  * the card (core_file.h reason), the game's load, Disk System flags, frames, picture and sound */
+static void cmd_pce(const char *arg, void *data, unsigned sz)
+{
+	extern volatile unsigned g_pce_frames;
+	extern volatile int g_pce_loaderr,g_pce_loadrc;
+	(void)arg; (void)data; (void)sz;
+	snprintf(lbuf,sizeof lbuf,"pce: core=%d load=%d frames=%u",g_pce_loaderr,g_pce_loadrc,g_pce_frames);
+	fastboot_info(lbuf); fastboot_okay("");
+}
+
 static void cmd_lynx(const char *arg, void *data, unsigned sz)
 {
 	extern volatile unsigned g_lynx_frames;
@@ -3566,6 +3578,7 @@ void gba_menu_fastboot_register(void)
 	fastboot_register("oem joytest", cmd_joytest, 1, 0);
 	fastboot_register("oem cardcores", cmd_cores, 1, 0);
 	fastboot_register("oem lynx", cmd_lynx, 1, 0);
+	fastboot_register("oem pce", cmd_pce, 1, 0);
 	fastboot_register("oem gen-rw", cmd_gen_rw, 1, 0);
 	fastboot_register("oem gen-bench", cmd_gen_bench, 1, 0);
 	fastboot_register("oem snes-launch", cmd_snes_launch, 1, 0);

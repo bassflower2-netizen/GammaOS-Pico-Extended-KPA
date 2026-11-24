@@ -280,6 +280,7 @@ static const struct rom_system {
 	{ GBA_CONSOLE_SG,      "sg sg1000 sg-1000",                  ".sg" },
 	{ GBA_CONSOLE_NES,     "nes famicom fds",                    ".nes .unf .unif .fds" },
 	{ GBA_CONSOLE_LYNX,    "lynx atarilynx",                     ".lnx .o" },
+	{ GBA_CONSOLE_PCE,     "pce pcengine turbografx16 tg16",      ".pce" },
 };
 #define N_SYSTEMS ((int)(sizeof k_systems / sizeof k_systems[0]))
 
@@ -851,6 +852,7 @@ const char *gba_sd_rom_exts(int type)
 uint32_t gba_sd_rom_cap(int type)
 {
 	if (type == GBA_CONSOLE_LYNX) return (2u << 20) + 64u;
+	if (type == GBA_CONSOLE_PCE) return 2621440u + 512u;
 	return type == GBA_CONSOLE_GBA ? 32u << 20 : 8u << 20;   /* GBA 32 MB; the others 8 MB */
 }
 

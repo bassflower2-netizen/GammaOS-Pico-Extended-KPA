@@ -22,6 +22,7 @@ mkdir -p out
 echo ">> Generating GBA cartridge placeholder"
 python3 tools/ayaneo/gba/gen_gba_cart.py out/gba_cart.png
 python3 tools/ayaneo/pico_current/lynx_art.py out/lynx_logo.png
+python3 tools/ayaneo/pico_current/pce_art.py out/pce_logo.png
 
 # Menu themes (tools/ayaneo/snes/themes/<name>/): classic first, its atlas is the asset tree's own,
 # then every other theme folder in name order, each with its own UI atlas. Picked on the Display page.
@@ -44,7 +45,8 @@ python3 tools/ayaneo/snes/pack_snes.py "$SNES_ASSETS" out/snes_pack.bin \
 	--logo-gg      tools/ayaneo/snes/logos/gg.png \
 	--logo-sg      tools/ayaneo/snes/logos/sg.png \
 	--logo-nes     tools/ayaneo/snes/logos/nes.png \
-	--logo-lynx    out/lynx_logo.png
+	--logo-lynx    out/lynx_logo.png \
+	--logo-pce     out/pce_logo.png
 
 echo ">> Building the SD card template (out/sdcard)"
 CORE_ARGS=()
@@ -101,6 +103,10 @@ fi
 if [ -n "${HANDY_BLOB:-}" ]; then
     [ -s "$HANDY_BLOB" ] || { echo "!! HANDY_BLOB missing" >&2; exit 1; }
     CORE_ARGS+=(--core "handy-pico=$HANDY_BLOB")
+fi
+if [ -n "${PCE_BLOB:-}" ]; then
+    [ -s "$PCE_BLOB" ] || { echo "!! PCE_BLOB missing" >&2; exit 1; }
+    CORE_ARGS+=(--core "pce-fast-pico=$PCE_BLOB")
 fi
 python3 tools/ayaneo/gba/build_sdcard.py out/snes_pack.bin out/sdcard "${CORE_ARGS[@]}"
 

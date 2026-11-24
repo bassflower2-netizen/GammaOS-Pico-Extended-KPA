@@ -484,6 +484,7 @@ def main():
                     help="PNG registered as resource 'logo_gg' (Game Gear card badge)")
     ap.add_argument("--logo-sg", dest="logo_sg", default=None,
                     help="PNG registered as resource 'logo_sg' (SG-1000 card badge)")
+    ap.add_argument("--logo-pce", default=None, help="PNG registered as logo_pce")
     ap.add_argument("--logo-lynx", default=None, help="PNG registered as logo_lynx")
     ap.add_argument("--logo-nes", dest="logo_nes", default=None,
                     help="PNG registered as resource 'logo_nes' (NES card badge)")
@@ -944,7 +945,7 @@ def main():
                       ("logo_gba", args.logo_gba), ("logo_snes", args.logo_snes),
                       ("logo_genesis", args.logo_genesis), ("logo_sms", args.logo_sms),
                       ("logo_gg", args.logo_gg), ("logo_sg", args.logo_sg),
-                      ("logo_nes", args.logo_nes), ("logo_lynx", args.logo_lynx)):
+                      ("logo_nes", args.logo_nes), ("logo_lynx", args.logo_lynx), ("logo_pce", args.logo_pce)):
         if path:
             lidx = add_image(path, tile=False)
             if lidx is not None:
