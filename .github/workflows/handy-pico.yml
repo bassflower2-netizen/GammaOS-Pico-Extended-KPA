@@ -40,3 +40,8 @@ jobs:
         run: |
           sudo apt-get install -y qemu-user libstdc++-arm-none-eabi-dev
           bash cores/handy-pico/build_arm_probe.sh handy-upstream "$RUNNER_TEMP/handy-arm-probe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Handy-Pico-EXPERIMENTAL-NOT-FOR-FLASHING
+          path: ${{ runner.temp }}/handy-arm-probe/handy-pico.blob
+          if-no-files-found: error

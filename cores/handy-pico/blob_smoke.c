@@ -75,6 +75,28 @@ int main(void)
         assert(!api->ram() && !api->state_size());
     }
     assert(videos>=18 && audio_frames>0);
+    /* Synthetic cartridge fixture: test loading/header validation and the entire
+     * 2048-byte EEPROM (including the second half), not commercial game boot. */
+    static uint8_t cart[64+65536], saved[2048], restored[2048], badbios[512];
+    memcpy(cart,"LYNX",4); cart[5]=1; cart[8]=1;
+    memcpy(cart+10,"Pico test",10); memcpy(cart+42,"Test",5);
+    cart[60]=5; cart[64]=1;
+    for(unsigned i=0;i<sizeof saved;i++) saved[i]=(uint8_t)(i^(i>>8));
+    assert(api->open_ex(cart,sizeof cart-1,&cb,NULL,0,NULL,0)<0);
+    assert(api->open_ex(cart,sizeof cart,&cb,NULL,0,saved,1024)<0);
+    assert(api->open_ex(cart,sizeof cart,&cb,badbios,511,NULL,0)<0);
+    assert(api->open_ex(cart,sizeof cart,&cb,badbios,sizeof badbios,saved,sizeof saved)==0);
+    assert(!api->bios_valid()); /* fake BIOS is rejected, fallback selected */
+    assert(api->eeprom(restored,1024)<0);
+    assert(api->eeprom(restored,sizeof restored)==sizeof restored);
+    assert(!memcmp(saved,restored,sizeof saved));
+    api->close();
+    assert(api->open_ex(cart,sizeof cart,&cb,NULL,0,restored,sizeof restored)==0);
+    memset(saved,0,sizeof saved);
+    assert(api->eeprom(saved,sizeof saved)==sizeof saved);
+    assert(!memcmp(saved,restored,sizeof saved));
+    api->close();
+    printf("Cartridge validation, BIOS rejection and 2048-byte EEPROM round-trip passed\n");
     printf("Flat blob executed: %lu bytes, span %lu, %u video callbacks, %u stereo samples\n",
         (unsigned long)len,(unsigned long)hdr[4],videos,audio_frames);
     return 0;

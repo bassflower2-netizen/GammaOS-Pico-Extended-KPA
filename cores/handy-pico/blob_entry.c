@@ -6,7 +6,8 @@ static const struct handy_blob_exports api = {
     HANDY_BLOB_MAGIC, HANDY_BLOB_VERSION,
     handy_pico_open, handy_pico_close, handy_pico_frame, handy_pico_reset,
     handy_pico_state_size, handy_pico_save, handy_pico_load,
-    handy_pico_ram, handy_pico_ram_size
+    handy_pico_ram, handy_pico_ram_size,
+    handy_pico_open_ex, handy_pico_eeprom, handy_pico_bios_valid
 };
 const struct handy_blob_exports *handy_blob_entry(void)
 {

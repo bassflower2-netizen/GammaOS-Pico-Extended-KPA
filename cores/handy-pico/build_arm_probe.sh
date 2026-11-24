@@ -13,6 +13,20 @@ CXX=arm-none-eabi-g++
 # Define the standard macro opt-ins at the compiler command line.
 FLAGS=(-D__STDC_FORMAT_MACROS=1 -D__STDC_LIMIT_MACROS=1 -D__STDC_CONSTANT_MACROS=1 -include "$HERE/native_inttypes.h" -march=armv7-a -mfloat-abi=soft -marm -mthumb-interwork -ffreestanding -fno-common -fno-short-enums -ffunction-sections -fdata-sections -Os)
 INC=(-I"$UPSTREAM" -I"$UPSTREAM/lynx" -I"$UPSTREAM/libretro" -I"$UPSTREAM/libretro-common/include")
+# Make two clearly marked modified upstream source copies; keep the pinned checkout untouched.
+python3 - "$UPSTREAM" "$OUT" <<'PY'
+from pathlib import Path
+import sys
+src, out = map(Path,sys.argv[1:])
+s=(src/"libretro/libretro.cpp").read_text()
+s += '\n// Pico memory-backed EEPROM and BIOS bridge (modified copy).\nextern "C" void handy_native_flush_eeprom(void) { if (lynx) lynx->SaveEEPROM(); }\nextern "C" int handy_native_bios_valid(void) { return lynx && lynx->mRom->mValid; }\n'
+(out/"libretro_native.cpp").write_text(s)
+s=(src/"lynx/eeprom.cpp").read_text()
+old='filestream_read(fe, romdata, 1024);'
+assert s.count(old)==1
+(out/"eeprom_native.cpp").write_text(s.replace(old,'filestream_read(fe, romdata, Size()); // Pico: read full EEPROM'))
+PY
+FLAGS+=(-DHANDY_NATIVE_MEMORY_FS)
 CORE_FLAGS=(-DFRONTEND_SUPPORTS_RGB565 -DWANT_CRC32 -DHAVE_NO_LANGEXTRA -DNDEBUG)
 # Verify integer formats against the actual argument types (not just presence).
 # If newlib omits PRIuPTR, select its type-correct spelling using the compiler.
@@ -29,7 +43,9 @@ OBJS=()
 for src in lynx/lynxdec.cpp lynx/cart.cpp lynx/memmap.cpp lynx/mikie.cpp lynx/ram.cpp lynx/rom.cpp lynx/susie.cpp lynx/system.cpp lynx/eeprom.cpp libretro/libretro.cpp blip/Blip_Buffer.cpp blip/Stereo_Buffer.cpp; do
     obj="$OUT/${src//\//_}.o"
     echo ">> ARM compile $src"
-    "$CXX" "${FLAGS[@]}" "${INC[@]}" "${CORE_FLAGS[@]}" -std=gnu++11 -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit -c "$UPSTREAM/$src" -o "$obj"
+    input="$UPSTREAM/$src"
+    case "$src" in libretro/libretro.cpp) input="$OUT/libretro_native.cpp";; lynx/eeprom.cpp) input="$OUT/eeprom_native.cpp";; esac
+    "$CXX" "${FLAGS[@]}" "${INC[@]}" "${CORE_FLAGS[@]}" -std=gnu++11 -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit -c "$input" -o "$obj"
     OBJS+=("$obj")
 done
 for src in handy_adapter.c smoke.c native_vfs.c qemu_entry.c; do
@@ -61,7 +77,7 @@ python3 - "$OUT/handy-pico.blob" <<'PY'
 import struct, sys
 data = open(sys.argv[1], "rb").read()
 magic, version, entry, load, span = struct.unpack_from("<5I", data)
-assert magic == 0x31584e4c and version == 1
+assert magic == 0x31584e4c and version == 2
 assert 20 <= entry < load == len(data) <= span <= 0x1000000
 assert entry % 4 == 0
 print(f"Handy flat blob: {load} bytes, span {span}, entry +0x{entry:x}")

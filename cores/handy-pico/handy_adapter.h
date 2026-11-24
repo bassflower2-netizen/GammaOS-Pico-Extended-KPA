@@ -18,4 +18,10 @@ int handy_pico_save(void *dst, size_t size);
 int handy_pico_load(const void *src, size_t size);
 void *handy_pico_ram(void);
 size_t handy_pico_ram_size(void);
+#ifdef HANDY_NATIVE_MEMORY_FS
+int handy_pico_open_ex(const void *,size_t,const struct handy_pico_callbacks *,
+                       const void *,size_t,const void *,size_t);
+int handy_pico_eeprom(void *,size_t);
+int handy_pico_bios_valid(void);
+#endif
 #endif
