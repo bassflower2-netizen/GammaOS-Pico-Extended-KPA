@@ -33,6 +33,10 @@ Without the card, or after Boot to Android in the menu, Android starts exactly a
   a console that lacks the other's game gets it over Bluetooth for the session, in memory only, never
   written to its card. A Game Boy game takes a few seconds; a large GBA game takes minutes the first
   time (Bluetooth moves about 100 KB a second).
+- **Linked Game Boy sessions keep your colours**: the palette you picked for an original Game Boy
+  game stays on through a session and after it, where it went grey. And the two consoles' checks
+  that they run the same game no longer disagree while an in-game menu is open (a byte of the save
+  state nobody wrote; the games themselves never parted).
 - **armGBA 2.0**, built the way upstream builds it for this kind of processor: about a fifth faster
   in busy GBA scenes. Save states from 1.1.1 load as they are.
 
