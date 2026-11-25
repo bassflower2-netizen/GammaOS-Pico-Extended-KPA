@@ -38,13 +38,15 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y make python3 python-is-python3 python3-pil python3-fonttools python3-numpy python3-cairosvg python3-venv openssl ca-certificates libc6:i386 lib32z1 lib32stdc++6 gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-dev libstdc++-arm-none-eabi-newlib binutils-arm-none-eabi patch qemu-user
+          sudo apt-get install -y make python3 python-is-python3 python3-pil python3-fonttools python3-numpy python3-cairosvg python3-venv openssl ca-certificates libc6:i386 lib32z1 lib32stdc++6 gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-dev libstdc++-arm-none-eabi-newlib binutils-arm-none-eabi patch qemu-user dosfstools mtools
           arm-none-eabi-gcc --version
           arm-none-eabi-g++ --version
           /usr/bin/python3 -m venv --system-site-packages "$RUNNER_TEMP/pico-python"
           "$RUNNER_TEMP/pico-python/bin/python" -m pip install --disable-pip-version-check 'arabic-reshaper==3.0.0' 'python-bidi==0.4.2'
           "$RUNNER_TEMP/pico-python/bin/python" -c 'import cairosvg, PIL, fontTools, numpy, arabic_reshaper, bidi'
           echo "$RUNNER_TEMP/pico-python/bin" >> "$GITHUB_PATH"
+      - name: Test CD SD bridge on real FAT16 and FAT32 images
+        run: bash emu/pce/test_sd_io.sh
       - name: Build original emulator cores with full compiler output
         run: |
           set -eu
@@ -77,6 +79,7 @@ jobs:
           test -d out/sdcard/roms/pce
           test -s build-k85v1_64_kpa/emu/pce/pce_core_loader.o
           test -s build-k85v1_64_kpa/emu/pce/pce_sd_run.o
+          test -s build-k85v1_64_kpa/emu/pce/pce_sd_io.o
           cmp "$RUNNER_TEMP/pce-native/pce-fast-pico.blob" out/sdcard/cores/pce-fast-pico.blob
           test -s out/pce_logo.png
           test -s out/sdcard/gammaos/menu.pack
