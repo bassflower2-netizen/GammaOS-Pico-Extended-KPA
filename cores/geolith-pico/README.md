@@ -18,3 +18,6 @@ Stage 3 passed at 138ae8c (runs 45659521590 and 45659521597). Include upstream l
 
 ## Stage 5: explicit native directory ABI
 At ade32f41 the integration build passed (45668259114), and both runtime architectures passed, but native-engine failed (45668258926) because newlib has no dirent implementation. Provide a private declaration-only directory ABI for the relocatable native probe, without modifying upstream or pretending filesystem operations succeed. Require directory imports to remain visible in the inventory and reject implicit function declarations. A real bounded filesystem adapter and final link are still required; no firmware packaging is enabled. New CI results pending.
+
+## Stage 6: directory entry type coverage
+At 1caacd9 integration run 45682465913 and both runtime jobs passed; native-engine run 45682465862 failed compiling vfs_implementation.c because DT_LNK was undeclared. Add the conventional distinct link type value and a strict standalone ARM compiler probe of the directory ABI. This only declares a type; it does not enable symlink traversal or supply fake filesystem operations. Existing unresolved-import checks remain intact. Native build results pending; real filesystem adapter and final link still outstanding.

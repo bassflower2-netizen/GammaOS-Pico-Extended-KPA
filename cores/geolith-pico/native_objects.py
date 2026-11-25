@@ -14,6 +14,16 @@ assert (zlib / "lib/libz.a").is_file()
 compat = pathlib.Path(__file__).resolve().parent.parent / "handy-pico/native_inttypes.h"
 native_headers = pathlib.Path(__file__).resolve().parent / "native_include"
 arch = ["-march=armv7-a", "-mfloat-abi=soft", "-marm"]
+# Compile the directory ABI independently before the expensive engine build.
+subprocess.run(["arm-none-eabi-gcc", *arch, "-I" + str(native_headers),
+                "-std=c11", "-Wall", "-Werror", "-x", "c", "-fsyntax-only", "-"],
+               input="""#include <dirent.h>
+_Static_assert(DT_UNKNOWN == 0 && DT_DIR == 4 && DT_REG == 8 && DT_LNK == 10,
+               "directory type ABI mismatch");
+int classify(const struct dirent *e) {
+    return e->d_type == DT_LNK || e->d_type == DT_DIR;
+}
+""", text=True, check=True)
 for fmt in ("u", "lu"):
     check = '#include <stdio.h>\n#include <stdint.h>\nvoid check(uintptr_t p) { printf("%' + fmt + '", p); }\n'
     if subprocess.run(["arm-none-eabi-gcc", *arch, "-Wformat=2", "-Werror", "-x", "c", "-fsyntax-only", "-"], input=check, text=True, capture_output=True).returncode == 0:
