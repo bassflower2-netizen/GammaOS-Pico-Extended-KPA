@@ -27,3 +27,6 @@ At fc1b8ee integration run 45700844197 and both runtime jobs passed; native-engi
 
 ## Stage 8: bounded native compression dependency
 At bb82261 both workflows passed (45704158371 and 45704158379), including the relocatable ARM engine and both synthetic runtime jobs. The import inventory still contains platform file, allocation, time and libc functions. Build only the in-memory zlib translation units for native use, avoiding configure's unsafe vsprintf fallback and unused gzFile stdio. CI checks archive imports and required compression exports, and rejects unresolved compression or gz imports in the combined engine. No upstream changes, no firmware packaging, no hardware tests. New CI pending; platform adapter and final link remain open.
+
+## Stage 9: repair workflow syntax
+At 3c3357c integration run 45711228363 passed, but Geolith run 45711225813 failed before creating any jobs. The native zlib import regex was split by a duplicated workflow tail. Restore the anchored regex and single job tail, retaining the unsafe-import rejection and required-export checks. No native tests ran on that failed workflow; the previous green engine remains bb82261. New CI pending.

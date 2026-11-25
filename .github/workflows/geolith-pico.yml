@@ -105,18 +105,7 @@ jobs:
           done
           arm-none-eabi-ar rcs libz.a adler32.o crc32.o deflate.o infback.o inffast.o inflate.o inftrees.o trees.o zutil.o compress.o uncompr.o
           arm-none-eabi-nm -u libz.a > "$RUNNER_TEMP/zlib-imports.txt"
-          if grep -Eq '[[:space:]](vsprintf|sprintf|gzprintf|gzvprintf)
-          mkdir -p "$RUNNER_TEMP/zlib-native/lib" "$RUNNER_TEMP/zlib-native/include"
-          cp libz.a "$RUNNER_TEMP/zlib-native/lib/"
-          cp zlib.h zconf.h "$RUNNER_TEMP/zlib-native/include/"
-      - name: Compile native engine and inventory unresolved imports
-        run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native" "$RUNNER_TEMP/zlib-native"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Geolith-native-engine-inventory-NOT-FOR-FLASHING
-          path: ${{ runner.temp }}/geolith-native/undefined.txt
-          if-no-files-found: error
- "$RUNNER_TEMP/zlib-imports.txt"; then
+          if grep -Eq '[[:space:]](vsprintf|sprintf|gzprintf|gzvprintf)$' "$RUNNER_TEMP/zlib-imports.txt"; then
             echo "Unsafe or unexpected formatted I/O in native zlib" >&2
             exit 1
           fi
