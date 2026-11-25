@@ -53,6 +53,13 @@ jobs:
           if [ "$ARCH" = arm-linux-soft ]; then
             CC=arm-linux-gnueabi-gcc
             FLAGS="-march=armv7-a -mfloat-abi=soft -marm"
+            test -s "$RUNNER_TEMP/zlib-arm/lib/libz.a"
+            printf '#include <zlib.h>\nint main(void){return zlibVersion()==0;}\n' | "$CC" $FLAGS -I"$RUNNER_TEMP/zlib-arm/include" -x c - -x none "$RUNNER_TEMP/zlib-arm/lib/libz.a" -o "$RUNNER_TEMP/zlib-probe"
+            qemu-arm -L /usr/arm-linux-gnueabi "$RUNNER_TEMP/zlib-probe"
+            # Cross GCC does not reliably honor LIBRARY_PATH. Pass explicit search paths.
+            printf '#!/bin/sh\nexec arm-linux-gnueabi-gcc -I"%s/include" -L"%s/lib" "$@"\n' "$RUNNER_TEMP/zlib-arm" "$RUNNER_TEMP/zlib-arm" > "$RUNNER_TEMP/geo-arm-cc"
+            chmod +x "$RUNNER_TEMP/geo-arm-cc"
+            CC="$RUNNER_TEMP/geo-arm-cc"
           fi
           make -C geo-upstream/libretro -j2 platform=unix CC="$CC" EXTRA_INCLUDES="$FLAGS"
           python3 cores/geolith-pico/fixture.py "$RUNNER_TEMP/geo-fixture"
