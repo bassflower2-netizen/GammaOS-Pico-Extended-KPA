@@ -24,14 +24,24 @@ jobs:
           ref: 846c5b541b42c122105b2a1bb29830ba03e93058
           path: geo-upstream
           persist-credentials: false
+      - uses: actions/checkout@v4
+        if: matrix.arch == 'arm-linux-soft'
+        with:
+          repository: madler/zlib
+          ref: v1.3.1
+          path: zlib-upstream
+          persist-credentials: false
       - name: Install test compilers
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-arm-linux-gnueabi qemu-user zlib1g-dev
           if [ "${{ matrix.arch }}" = arm-linux-soft ]; then
-            sudo dpkg --add-architecture armel
-            sudo apt-get update
-            sudo apt-get install -y zlib1g-dev:armel
+            cd zlib-upstream
+            CC="arm-linux-gnueabi-gcc" CFLAGS="-O2 -fPIC -march=armv7-a -mfloat-abi=soft -marm" ./configure --static --prefix="$RUNNER_TEMP/zlib-arm"
+            make -j2
+            make install
+            echo "CPATH=$RUNNER_TEMP/zlib-arm/include" >> "$GITHUB_ENV"
+            echo "LIBRARY_PATH=$RUNNER_TEMP/zlib-arm/lib" >> "$GITHUB_ENV"
           fi
       - name: Compile and test original synthetic cartridge
         env:
