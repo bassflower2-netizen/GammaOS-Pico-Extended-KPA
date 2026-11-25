@@ -23,8 +23,8 @@ LINK=(-nostartfiles -static -Wl,--gc-sections -Wl,--no-undefined)
 test -z "$(arm-none-eabi-nm -u "$OUT/pce-arm.elf")"
 arm-none-eabi-size "$OUT/pce-arm.elf"
 timeout 90s qemu-arm "$OUT/pce-arm.elf"
-# Explicit opt-in CD test until ABI 2 is integrated. ABI 1 HuCard blob unchanged.
-if [ "${PCE_CD_PROBE:-0}" = 1 ]; then
+ # CD sector decoding is checked in a native ELF before the flat ABI test.
+if [ "${PCE_CD_PROBE:-1}" = 1 ]; then
     "$CC" "${FLAGS[@]}" "${INC[@]}" -I"$UPSTREAM" -std=gnu99 -DPCE_NATIVE_CD -c "$HERE/cd_smoke.c" -o "$OUT/cd-smoke.o"
     "$CC" "${FLAGS[@]}" "${LINK[@]}" -Wl,-e,probe_start "${CORE[@]}" "$OUT/cd-smoke.o" "$OUT/qemu.o" "${LIBS[@]}" -o "$OUT/pce-cd-arm.elf"
     test -z "$(arm-none-eabi-nm -u "$OUT/pce-cd-arm.elf")"
@@ -38,7 +38,7 @@ python3 - "$OUT/pce-fast-pico.blob" <<'PY'
 import struct,sys
 d=open(sys.argv[1],"rb").read()
 magic,ver,entry,load,span=struct.unpack_from("<5I",d)
-assert magic==0x31454350 and ver==1
+assert magic==0x31454350 and ver==2
 assert 20<=entry<load==len(d)<=span<=0x1000000 and entry%4==0
 print(f"PCE flat blob: {load} bytes, span {span}, entry +0x{entry:x}")
 PY
@@ -55,3 +55,9 @@ EOF
 "$CC" "${FLAGS[@]}" "${INC[@]}" -std=gnu99 -DPCE_FLAT_TEST -c "$HERE/smoke.c" -o "$OUT/flat-smoke.o"
 "$CC" "${FLAGS[@]}" "${LINK[@]}" -Wl,-e,probe_start "$OUT/flat-smoke.o" "$OUT/embed.o" "$OUT/runtime.o" "$OUT/qemu.o" "${LIBS[@]}" -o "$OUT/flat-smoke.elf"
 timeout 90s qemu-arm "$OUT/flat-smoke.elf"
+
+# Test the same CD lifecycle via the exact distributed flat blob export table.
+# Direct CDIF sector decoding is tested in the native ELF above.
+"$CC" "${FLAGS[@]}" "${INC[@]}" -I"$UPSTREAM" -std=gnu99 -DPCE_NATIVE_CD -DPCE_FLAT_TEST -c "$HERE/cd_smoke.c" -o "$OUT/flat-cd-smoke.o"
+"$CC" "${FLAGS[@]}" "${LINK[@]}" -Wl,-e,probe_start "$OUT/flat-cd-smoke.o" "$OUT/embed.o" "$OUT/runtime.o" "$OUT/qemu.o" "${LIBS[@]}" -o "$OUT/flat-cd-smoke.elf"
+timeout 90s qemu-arm "$OUT/flat-cd-smoke.elf"

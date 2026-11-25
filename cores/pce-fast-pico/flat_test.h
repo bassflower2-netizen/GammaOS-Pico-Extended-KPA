@@ -23,7 +23,7 @@ static void flat_load(void)
     memcpy(slot,probe_blob_start,n);memset(slot+n,0,hdr[4]-n);
     pce_blob_entry_fn entry=(pce_blob_entry_fn)(slot+hdr[2]);
     flat_api=entry();
-    assert(flat_api&&flat_api->magic==PCE_BLOB_MAGIC&&flat_api->version==PCE_BLOB_VERSION);
+    assert(flat_api&&flat_api->magic==PCE_BLOB_MAGIC&&flat_api->version==PCE_BLOB_VERSION&&flat_api->open_cd);
     printf("PCE flat loader: %lu bytes, span %lu\n",(unsigned long)n,(unsigned long)hdr[4]);
 }
 #define pce_pico_open flat_api->open
@@ -37,3 +37,4 @@ static void flat_load(void)
 #define pce_pico_ram_size flat_api->ram_size
 #define pce_pico_bram flat_api->bram
 #define pce_pico_bram_size flat_api->bram_size
+#define pce_pico_open_cd flat_api->open_cd

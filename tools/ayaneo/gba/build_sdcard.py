@@ -62,8 +62,8 @@ def check_core(name, data):
     magic, ver, entry, load, span = struct.unpack("<5I", data[:20])
     if magic != CORE_MAGIC[name]:
         sys.exit("%s: magic 0x%08x, expected 0x%08x" % (name, magic, CORE_MAGIC[name]))
-    if name == "pce-fast-pico" and (ver != 1 or entry % 4 or load != len(data)):
-        sys.exit("pce-fast-pico: expected complete ABI 1 image")
+    if name == "pce-fast-pico" and (ver != 2 or entry % 4 or load != len(data)):
+        sys.exit("pce-fast-pico: expected complete ABI 2 image")
     if name == "handy-pico" and (ver != 2 or entry % 4 or load != len(data)):
         sys.exit("handy-pico: expected complete ABI 2 image and aligned entry")
     # the LK accepts a file up to 16 bytes short of the load size (the dropped end pad)

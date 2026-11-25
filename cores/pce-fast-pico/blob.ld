@@ -5,7 +5,7 @@ SECTIONS
     . = 0x4F000000;
     .header : {
         LONG(0x31454350);
-        LONG(1);
+        LONG(2);
         LONG(pce_blob_entry - 0x4F000000);
         LONG(__load_end - 0x4F000000);
         LONG(__span_end - 0x4F000000);

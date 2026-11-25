@@ -1,22 +1,28 @@
 /* Original synthetic disc and BIOS fixtures. No copyrighted game content. */
 #include "pce_adapter.h"
+#ifndef PCE_FLAT_TEST
 #include "mednafen/cdrom/cdromif.h"
+#endif
 #include <streams/file_stream.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef PCE_FLAT_TEST
+#include "flat_test.h"
+#endif
 static uint8_t bios[262144];
 static const char cue[]="FILE \"track.bin\" BINARY\n  TRACK 01 MODE1/2048\n    INDEX 01 00:00:00\n";
 #define DISC_BYTES (2048u*256u)
 static unsigned opens,closes,reads,track_reads,video_frames,audio_frames;
 static int missing_bios;
+static unsigned track_opens;
 static int open_file(const char *path,uint32_t *size)
 {
     int id;
     if(!strcmp(path,"/pico/bios/syscard3.pce")&&!missing_bios){id=1;*size=sizeof bios;}
     else if(!strcmp(path,"/pico/disc/test.cue")){id=2;*size=sizeof cue-1;}
-    else if(!strcmp(path,"/pico/disc/track.bin")){id=3;*size=DISC_BYTES;}
+    else if(!strcmp(path,"/pico/disc/track.bin")){id=3;*size=DISC_BYTES;++track_opens;}
     else return -1;
     ++opens;return id;
 }
@@ -39,6 +45,9 @@ static size_t audio(const int16_t *p,size_t n)
 {if(n)assert(p);audio_frames+=(unsigned)n;return n;}
 int main(void)
 {
+    #ifdef PCE_FLAT_TEST
+    flat_load();
+    #endif
     /* Each 8 KiB bank has a reset-safe HuC6280 loop, not a real System Card. */
     memset(bios,0xea,sizeof bios);
     for(unsigned b=0;b<sizeof bios;b+=8192){
@@ -54,6 +63,7 @@ int main(void)
     assert(pce_pico_open_cd("test.cue",&io,&cb)==0);
     /* Exercise actual upstream CD sector decoding at non-sequential LBAs.
      * Separate interface on the same read-only fixture. */
+    #ifndef PCE_FLAT_TEST
     CDIF *disc=CDIF_Open("/pico/disc/test.cue",false);
     assert(disc);
     static uint8_t sector[2048];
@@ -64,14 +74,27 @@ int main(void)
         for(unsigned i=0;i<sizeof sector;i++)assert(sector[i]==(uint8_t)(lba^(i&255)));
     }
     CDIF_Close(disc);
+    assert(track_reads>0);
+    #endif
     for(unsigned i=0;i<8;i++)assert(pce_pico_frame(0)==0);
-    assert(video_frames>=8&&audio_frames>0&&track_reads>0);
+    assert(video_frames>=8&&audio_frames>0&&track_opens>0);
     size_t n=pce_pico_state_size();assert(n>8192&&n<4u*1024u*1024u);
     void *state=malloc(n);assert(state);
     uint8_t *bram=pce_pico_bram();assert(bram&&pce_pico_bram_size()==2048);
     bram[100]=0x43;assert(pce_pico_save(state,n)==0);
     bram[100]=0;assert(pce_pico_load(state,n)==0&&bram[100]==0x43);
+    pce_pico_close();
+    assert(opens==closes);
+    assert(pce_pico_open_cd("test.cue",&io,&cb)==0);
+    assert(pce_pico_state_size()==n);
+    assert(pce_pico_load(state,n)==0);
+    assert(((uint8_t *)pce_pico_bram())[100]==0x43);
+    assert(pce_pico_frame(0)==0);
+    pce_pico_close();
     free(state);
+    /* Same mapped core must still accept a HuCard after CD cleanup. */
+    assert(pce_pico_open(bios,8192,&cb)==0);
+    assert(pce_pico_frame(0)==0);
     pce_pico_close();
     assert(opens==closes);
     printf("PCE CD synthetic smoke: %u video, %u audio, %u reads (%u track), %u balanced opens/closes, %lu byte state\n",video_frames,audio_frames,reads,track_reads,opens,(unsigned long)n);

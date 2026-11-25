@@ -1,5 +1,4 @@
-/* Experimental LK adapter. Cartridge dispatch remains disabled pending the
- * PCE session runner and menu work. */
+/* PCE ABI 2 loader. HuCard session enabled; CD session wiring pending. */
 #include "pce_core_loader.h"
 #include "../gba/core_file.h"
 
@@ -32,7 +31,7 @@ const struct pce_blob_exports *pce_core_load(fat_vol *v,int *error)
                (p&3u) || api->magic!=PCE_BLOB_MAGIC || api->version!=PCE_BLOB_VERSION ||
                !api->open || !api->close || !api->frame || !api->reset ||
                !api->state_size || !api->save || !api->load || !api->ram || !api->ram_size ||
-               !api->bram || !api->bram_size) {
+               !api->bram || !api->bram_size || !api->open_cd) {
                 api=0; e=CORE_FILE_REJECTED;
             }
         }
