@@ -12,6 +12,7 @@ zlib = pathlib.Path(sys.argv[3]).resolve()
 assert (zlib / "lib/libz.a").is_file()
 # Reuse the type-checked newlib format shim already used by PCE/Handy.
 compat = pathlib.Path(__file__).resolve().parent.parent / "handy-pico/native_inttypes.h"
+native_headers = pathlib.Path(__file__).resolve().parent / "native_include"
 arch = ["-march=armv7-a", "-mfloat-abi=soft", "-marm"]
 for fmt in ("u", "lu"):
     check = '#include <stdio.h>\n#include <stdint.h>\nvoid check(uintptr_t p) { printf("%' + fmt + '", p); }\n'
@@ -32,7 +33,7 @@ for line in plan.splitlines():
     src = sources[0]
     obj = out / (src.removeprefix("../").replace("/", "_") + ".o")
     flags = [a for a in args[1:] if a.startswith(("-I", "-D")) and not a.startswith("-DGIT_VERSION")]
-    subprocess.run(["arm-none-eabi-gcc", "-march=armv7-a", "-mfloat-abi=soft", "-marm", "-ffreestanding", "-fno-common", "-Os", "-D__STDC_FORMAT_MACROS=1", "-D__STDC_LIMIT_MACROS=1", "-D__STDC_CONSTANT_MACROS=1", "-include", str(shim), "-I" + str(zlib / "include"), *flags, "-c", src, "-o", str(obj)], cwd=cwd, check=True)
+    subprocess.run(["arm-none-eabi-gcc", "-march=armv7-a", "-mfloat-abi=soft", "-marm", "-ffreestanding", "-fno-common", "-Os", "-D__STDC_FORMAT_MACROS=1", "-D__STDC_LIMIT_MACROS=1", "-D__STDC_CONSTANT_MACROS=1", "-include", str(shim), "-I" + str(native_headers), "-I" + str(zlib / "include"), "-Werror=implicit-function-declaration", *flags, "-c", src, "-o", str(obj)], cwd=cwd, check=True)
     objects.append(obj)
 assert len(objects) >= 15, f"Unexpected engine source count: {len(objects)}"
 combined = out / "geolith-engine.o"
@@ -43,6 +44,7 @@ imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(combined)], tex
 (out / "undefined.txt").write_text(imports)
 missing = {line.split()[-1] for line in imports.splitlines() if line.strip()}
 assert not any(s.startswith(("mz_zip_", "geo_resampler_", "chd_", "inflate", "ZSTD_", "Lzma")) for s in missing), missing
-print("ZIP and audio resampler dependencies resolved in native object")
+assert {"opendir", "readdir", "closedir"} <= missing, "Directory ABI must remain explicit until a platform adapter is linked"
+print("ZIP and audio resampler dependencies resolved; directory ABI remains unresolved")
 subprocess.run(["arm-none-eabi-readelf", "-h", str(combined)], check=True)
 print(f"Compiled {len(objects)} native engine objects. Unresolved imports:\n{imports}")

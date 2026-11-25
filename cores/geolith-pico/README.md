@@ -15,3 +15,6 @@ Stage 2 passed at d555bda (runs 45653983122 and 45653983923). The native object 
 
 ## Stage 4: native compression dependency probe
 Stage 3 passed at 138ae8c (runs 45659521590 and 45659521597). Include upstream libretro-common, LZMA and Zstandard objects selected by the pinned Makefile and build zlib for arm-none-eabi. Assert that CHD and major compression imports are resolved in the relocatable object. This does not enable Neo Geo CD or claim a runnable firmware core. Newlib portability and final linking remain under test.
+
+## Stage 5: explicit native directory ABI
+At ade32f41 the integration build passed (45668259114), and both runtime architectures passed, but native-engine failed (45668258926) because newlib has no dirent implementation. Provide a private declaration-only directory ABI for the relocatable native probe, without modifying upstream or pretending filesystem operations succeed. Require directory imports to remain visible in the inventory and reject implicit function declarations. A real bounded filesystem adapter and final link are still required; no firmware packaging is enabled. New CI results pending.
