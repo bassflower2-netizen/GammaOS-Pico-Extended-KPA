@@ -97,8 +97,33 @@ jobs:
         run: |
           set -eu
           cd zlib-upstream
-          CC=arm-none-eabi-gcc AR=arm-none-eabi-ar RANLIB=arm-none-eabi-ranlib CFLAGS="-Os -march=armv7-a -mfloat-abi=soft -marm" ./configure --static --prefix="$RUNNER_TEMP/zlib-native"
-          make -j2 libz.a
+          # The engine needs the in-memory compression API, not gzFile stdio.
+          # Avoid configure's bare-metal link probes selecting unsafe vsprintf.
+          flags="-Os -march=armv7-a -mfloat-abi=soft -marm"
+          for src in adler32 crc32 deflate infback inffast inflate inftrees trees zutil compress uncompr; do
+            arm-none-eabi-gcc $flags -I. -c "$src.c" -o "$src.o"
+          done
+          arm-none-eabi-ar rcs libz.a adler32.o crc32.o deflate.o infback.o inffast.o inflate.o inftrees.o trees.o zutil.o compress.o uncompr.o
+          arm-none-eabi-nm -u libz.a > "$RUNNER_TEMP/zlib-imports.txt"
+          if grep -Eq '[[:space:]](vsprintf|sprintf|gzprintf|gzvprintf)
+          mkdir -p "$RUNNER_TEMP/zlib-native/lib" "$RUNNER_TEMP/zlib-native/include"
+          cp libz.a "$RUNNER_TEMP/zlib-native/lib/"
+          cp zlib.h zconf.h "$RUNNER_TEMP/zlib-native/include/"
+      - name: Compile native engine and inventory unresolved imports
+        run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native" "$RUNNER_TEMP/zlib-native"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Geolith-native-engine-inventory-NOT-FOR-FLASHING
+          path: ${{ runner.temp }}/geolith-native/undefined.txt
+          if-no-files-found: error
+ "$RUNNER_TEMP/zlib-imports.txt"; then
+            echo "Unsafe or unexpected formatted I/O in native zlib" >&2
+            exit 1
+          fi
+          arm-none-eabi-nm --defined-only libz.a > "$RUNNER_TEMP/zlib-symbols.txt"
+          for symbol in inflate deflate compress uncompress crc32; do
+            grep -Eq "[[:space:]]T[[:space:]]$symbol$" "$RUNNER_TEMP/zlib-symbols.txt"
+          done
           mkdir -p "$RUNNER_TEMP/zlib-native/lib" "$RUNNER_TEMP/zlib-native/include"
           cp libz.a "$RUNNER_TEMP/zlib-native/lib/"
           cp zlib.h zconf.h "$RUNNER_TEMP/zlib-native/include/"

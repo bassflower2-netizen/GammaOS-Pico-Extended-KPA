@@ -55,7 +55,7 @@ assert any("speex" in p.name for p in objects), "Missing audio resampler"
 imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(combined)], text=True)
 (out / "undefined.txt").write_text(imports)
 missing = {line.split()[-1] for line in imports.splitlines() if line.strip()}
-assert not any(s.startswith(("mz_zip_", "geo_resampler_", "chd_", "inflate", "ZSTD_", "Lzma")) for s in missing), missing
+assert not any(s.startswith(("mz_zip_", "geo_resampler_", "chd_", "inflate", "deflate", "gz", "ZSTD_", "Lzma")) or s in {"compress", "compress2", "uncompress", "uncompress2", "crc32", "adler32"} for s in missing), missing
 assert {"opendir", "readdir", "closedir", "utime"} <= missing, "Directory and timestamp ABI must remain explicit until a platform adapter is linked"
 print("ZIP and audio resampler dependencies resolved; directory ABI remains unresolved")
 subprocess.run(["arm-none-eabi-readelf", "-h", str(combined)], check=True)

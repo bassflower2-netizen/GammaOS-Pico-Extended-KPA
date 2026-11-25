@@ -24,3 +24,6 @@ At 1caacd9 integration run 45682465913 and both runtime jobs passed; native-engi
 
 ## Stage 7: native timestamp declaration
 At fc1b8ee integration run 45700844197 and both runtime jobs passed; native-engine job 139510202410 in run 45700844178 failed on implicit utime declaration in miniz. Add a private POSIX-compatible declaration using time_t and compile-check its signature. Keep utime unresolved until a real platform adapter is linked. No timestamp writes or firmware packaging enabled. Native CI pending. Zlib configure also reported unsafe vsprintf fallback; resolve before final native linking/packaging.
+
+## Stage 8: bounded native compression dependency
+At bb82261 both workflows passed (45704158371 and 45704158379), including the relocatable ARM engine and both synthetic runtime jobs. The import inventory still contains platform file, allocation, time and libc functions. Build only the in-memory zlib translation units for native use, avoiding configure's unsafe vsprintf fallback and unused gzFile stdio. CI checks archive imports and required compression exports, and rejects unresolved compression or gz imports in the combined engine. No upstream changes, no firmware packaging, no hardware tests. New CI pending; platform adapter and final link remain open.
