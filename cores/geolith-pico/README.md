@@ -12,3 +12,6 @@ Host and ARM Linux synthetic cartridge tests passed at 8ba3df2 (run 45653382484)
 
 ## Stage 3: native ZIP and audio dependencies
 Stage 2 passed at d555bda (runs 45653983122 and 45653983923). The native object now includes bundled miniz and Speex resampler sources and CI asserts their engine imports are resolved. CHD, filesystem, allocator, time and final linking remain open. No firmware integration yet.
+
+## Stage 4: native compression dependency probe
+Stage 3 passed at 138ae8c (runs 45659521590 and 45659521597). Include upstream libretro-common, LZMA and Zstandard objects selected by the pinned Makefile and build zlib for arm-none-eabi. Assert that CHD and major compression imports are resolved in the relocatable object. This does not enable Neo Geo CD or claim a runnable firmware core. Newlib portability and final linking remain under test.

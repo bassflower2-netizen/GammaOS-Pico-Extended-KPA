@@ -83,12 +83,27 @@ jobs:
           ref: 846c5b541b42c122105b2a1bb29830ba03e93058
           path: geo-upstream
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: madler/zlib
+          ref: v1.3.1
+          path: zlib-upstream
+          persist-credentials: false
       - name: Install bare-metal toolchain
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi binutils-arm-none-eabi
+      - name: Build native static zlib
+        run: |
+          set -eu
+          cd zlib-upstream
+          CC=arm-none-eabi-gcc AR=arm-none-eabi-ar RANLIB=arm-none-eabi-ranlib CFLAGS="-Os -march=armv7-a -mfloat-abi=soft -marm" ./configure --static --prefix="$RUNNER_TEMP/zlib-native"
+          make -j2 libz.a
+          mkdir -p "$RUNNER_TEMP/zlib-native/lib" "$RUNNER_TEMP/zlib-native/include"
+          cp libz.a "$RUNNER_TEMP/zlib-native/lib/"
+          cp zlib.h zconf.h "$RUNNER_TEMP/zlib-native/include/"
       - name: Compile native engine and inventory unresolved imports
-        run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native"
+        run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native" "$RUNNER_TEMP/zlib-native"
       - uses: actions/upload-artifact@v4
         with:
           name: Geolith-native-engine-inventory-NOT-FOR-FLASHING
