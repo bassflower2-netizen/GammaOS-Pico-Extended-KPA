@@ -72,3 +72,25 @@ jobs:
             arm-linux-gnueabi-readelf -h "$RUNNER_TEMP/geo-smoke"
             timeout 120s qemu-arm -L /usr/arm-linux-gnueabi "$RUNNER_TEMP/geo-smoke" "$RUNNER_TEMP/geo-fixture"
           fi
+  native-engine:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: libretro/geolith-libretro
+          ref: 846c5b541b42c122105b2a1bb29830ba03e93058
+          path: geo-upstream
+          persist-credentials: false
+      - name: Install bare-metal toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi binutils-arm-none-eabi
+      - name: Compile native engine and inventory unresolved imports
+        run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Geolith-native-engine-inventory-NOT-FOR-FLASHING
+          path: ${{ runner.temp }}/geolith-native/undefined.txt
+          if-no-files-found: error
