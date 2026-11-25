@@ -77,6 +77,10 @@ jobs:
           cmp "$RUNNER_TEMP/handy-arm-probe/handy-pico.blob" out/sdcard/cores/handy-pico.blob
           test -d out/sdcard/roms/lynx
           test -d out/sdcard/roms/pce
+          test -d out/sdcard/roms/pcecd
+          grep -q "api->open_cd(cue" emu/pce/pce_sd_run.c
+          grep -q "GBA_CONSOLE_PCECD" emu/gba/pico_current.c
+          grep -q "GBA_CONSOLE_PCECD" emu/gba/sd_fat.c
           test -s build-k85v1_64_kpa/emu/pce/pce_core_loader.o
           test -s build-k85v1_64_kpa/emu/pce/pce_sd_run.o
           test -s build-k85v1_64_kpa/emu/pce/pce_sd_io.o
@@ -99,7 +103,7 @@ jobs:
           grep -q 'Atari Lynx' emu/gba/pico_current.c
       - uses: actions/upload-artifact@v4
         with:
-          name: Extended-KPA-LYNX-PCE-ALPHA-UNTESTED
+          name: Extended-KPA-LYNX-PCE-PCECD-ALPHA-UNTESTED
           path: |
             out/lk_a_kpa_signed.img
             out/sdcard/

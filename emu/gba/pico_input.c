@@ -306,6 +306,7 @@ static const char *sys_tok(int system)
 	case GBA_CONSOLE_NES: return "nes";
 	case GBA_CONSOLE_LYNX: return "lynx";
 	case GBA_CONSOLE_PCE: return "pce";
+	case GBA_CONSOLE_PCECD: return "pcecd";
 	default: return 0;
 	}
 }
@@ -319,6 +320,7 @@ static void jobs_of(int system, const struct pi_job **job, int *nj)
 	case GBA_CONSOLE_SMS: case GBA_CONSOLE_GG: case GBA_CONSOLE_SG: USE(k_sms); break;
 	case GBA_CONSOLE_NES: USE(k_nes); break;
 	case GBA_CONSOLE_LYNX: USE(k_lynx); break;
+	case GBA_CONSOLE_PCECD:
 	case GBA_CONSOLE_PCE: USE(k_pce); break;
 	default: USE(k_gba); break;
 	}

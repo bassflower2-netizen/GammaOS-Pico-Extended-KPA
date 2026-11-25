@@ -35,7 +35,7 @@ CORE_SLOT = {
     "handy-pico": 0x1000000, # experimental armSNES overlay
     "ra-pico": 0x100000,     # RetroAchievements: the image's part of its 4 MB (the rest is its heap)
 }
-ROM_DIRS = ["gb", "gbc", "gba", "snes", "genesis", "sms", "gg", "sg", "nes", "lynx", "pce"]
+ROM_DIRS = ["gb", "gbc", "gba", "snes", "genesis", "sms", "gg", "sg", "nes", "lynx", "pce", "pcecd"]
 
 BOOT_CFG = ("# GammaOS Pico boot mode for this card.\n"
             "#   boot=sd       start the GammaOS Pico menu from this card\n"
@@ -105,7 +105,7 @@ def main():
                     "Place complete headered .lnx or BS93 .o homebrew in /roms/lynx. Experimental hardware test.\n")
     if any(spec.startswith("pce-fast-pico=") for spec in a.core):
         with open(os.path.join(a.out, "bios", "README.txt"), "a", newline="\n") as f:
-            f.write("\nPC Engine: .pce HuCards in /roms/pce; no BIOS needed. CD games not yet enabled.\n")
+            f.write("\nPC Engine: .pce HuCards in /roms/pce; no BIOS needed. CD: /roms/pcecd/*.cue with track files in the same directory, unarchived. Supply your own /bios/syscard3.pce (256 KiB, optional 512-byte header). CHD not enabled; hardware untested.\n")
     for spec in a.core:
         name, _, path = spec.partition("=")
         data = open(path, "rb").read()

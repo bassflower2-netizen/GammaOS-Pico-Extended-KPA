@@ -281,6 +281,7 @@ static const struct rom_system {
 	{ GBA_CONSOLE_NES,     "nes famicom fds",                    ".nes .unf .unif .fds" },
 	{ GBA_CONSOLE_LYNX,    "lynx atarilynx",                     ".lnx .o" },
 	{ GBA_CONSOLE_PCE,     "pce pcengine turbografx16 tg16",      ".pce" },
+	{ GBA_CONSOLE_PCECD,   "pcecd pcenginecd turbografxcd",       ".cue" },
 };
 #define N_SYSTEMS ((int)(sizeof k_systems / sizeof k_systems[0]))
 
@@ -603,6 +604,8 @@ static int scan_rom_folder(fat_vol *v, const char *path, uint32_t id, const stru
 		if (e.is_dir || e.size == 0) continue;  /* folders, empty placeholder files */
 		if (e.name[0] == '.') continue;         /* macOS "._" resource files and the like */
 		el = word_in(e.name, sys->exts, 1);
+		if (!el && sys->type == GBA_CONSOLE_PCECD) continue; /* CD tracks must stay on card */
+		if (sys->type == GBA_CONSOLE_PCECD && (e.size > 512u*1024u || strlen(e.name)>240)) continue;
 		if (!el) {	/* games in an archive: a .zip or .7z in the system's folder */
 			if ((el = word_in(e.name, ".zip", 1)) != 0) arc = RA_ZIP;
 			else if ((el = word_in(e.name, ".7z", 1)) != 0) arc = RA_7Z;
@@ -833,6 +836,7 @@ int gba_sd_make_rom_dirs(fat_vol *v)
 	if (fat_wr_mkpath(v, "/roms/sms")  != 0) rc = -1;
 	if (fat_wr_mkpath(v, "/roms/gg")   != 0) rc = -1;
 	if (fat_wr_mkpath(v, "/roms/sg")   != 0) rc = -1;
+	if (fat_wr_mkpath(v, "/roms/pcecd") != 0) rc = -1;
 	return rc;
 }
 
@@ -853,6 +857,7 @@ uint32_t gba_sd_rom_cap(int type)
 {
 	if (type == GBA_CONSOLE_LYNX) return (2u << 20) + 64u;
 	if (type == GBA_CONSOLE_PCE) return 2621440u + 512u;
+	if (type == GBA_CONSOLE_PCECD) return 512u*1024u; /* CUE descriptor, not disc size */
 	return type == GBA_CONSOLE_GBA ? 32u << 20 : 8u << 20;   /* GBA 32 MB; the others 8 MB */
 }
 
@@ -894,6 +899,7 @@ int gba_rom_check(fat_vol *v, const gba_rom_entry *r)
 	uint32_t n = r->size;
 	int rc;
 	if (!v || !r) return RA_ERR_READ;
+	if (r->type == GBA_CONSOLE_PCECD && r->arc) return RA_ERR_DAMAGED;
 	if (r->arc) {
 		rom_file(v, r, &f);
 		rc = rom_archive_probe(r->arc, &f, gba_sd_rom_exts(r->type), r->member, &n);

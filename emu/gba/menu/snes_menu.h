@@ -231,7 +231,7 @@ typedef struct snes_menu_s {
 	/* Per-ROM console type (0=GB, 1=GBC, 2=GBA; indexed by game index) and the three
 	 * console-badge logos, drawn bottom-right of each card. gba_types=0 -> no badge. */
 	const unsigned char *gba_types;
-	const snes_img_entry *console_logo[11];   /* [GB/GBC/GBA/SNES/GENESIS/SMS/GG/SG/NES/LYNX/PCE] indexed by GBA_CONSOLE_* */
+	const snes_img_entry *console_logo[12];   /* [GB/GBC/GBA/SNES/GENESIS/SMS/GG/SG/NES/LYNX/PCE/PCECD] indexed by GBA_CONSOLE_* */
 	int launch;                         /* focused ROM index to launch, -1 = none */
 	/* The Suspend Point List's four cards: 0 the game's suspend point, 1..3 its save slots. The
 	 * caller fills them for game gidx (a view index) each time the list opens (points_get); a

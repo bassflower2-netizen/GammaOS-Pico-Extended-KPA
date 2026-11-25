@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <platform/ayaneo_volume_input.h>
 #include "pce_core_loader.h"
+#include "pce_sd_io.h"
 #include "../gba/sd_fat.h"
 #include "../gba/rom_archive.h"
 #include "../gba/pico_igm.h"
@@ -60,6 +61,9 @@ static const struct pce_blob_exports *api;
 static fat_vol *vol;
 static const gba_rom_entry *rom;
 static unsigned width,height;
+static int cd_session,cd_io_started;
+static const char *state_dir(void){return cd_session?"/states/pcecd":"/states/pce";}
+static const char *save_dir(void){return cd_session?"/saves/pcecd":"/saves/pce";}
 static int opened,exit_game,menu,rich_menu,slot,selection,dirty;
 static char status[96];
 static unsigned settings_age;
@@ -85,8 +89,8 @@ static int save_state(const char *ext)
 {
     size_t n=api->state_size();
     if(!n || n>STATE_CAP || api->save(STATE_BUF,n)) return -1;
-    if(gba_sd_write_named(vol,"/states/pce",rom->name,ext,STATE_BUF,(unsigned)n)) return -1;
-    pico_shot_save(vol,"/states/pce",rom->name,ext,0);
+    if(gba_sd_write_named(vol,state_dir(),rom->name,ext,STATE_BUF,(unsigned)n)) return -1;
+    pico_shot_save(vol,state_dir(),rom->name,ext,0);
     return 0;
 }
 static int load_state(const char *ext)
@@ -94,7 +98,7 @@ static int load_state(const char *ext)
     size_t n=api->state_size();
     if(!n || n>=STATE_CAP) return -1;
     card_writer_flush();
-    unsigned got=gba_sd_read_named(vol,"/states/pce",rom->name,ext,STATE_BUF,(unsigned)n+1);
+    unsigned got=gba_sd_read_named(vol,state_dir(),rom->name,ext,STATE_BUF,(unsigned)n+1);
     return got==n ? api->load(STATE_BUF,n) : -1;
 }
 static int battery_save(void)
@@ -102,7 +106,7 @@ static int battery_save(void)
     size_t n=api->bram_size();
     const void *p=api->bram();
     if(!n || !p || n>32768) return -1;
-    return gba_sd_write_named(vol,"/saves/pce",rom->name,"sav",p,(unsigned)n);
+    return gba_sd_write_named(vol,save_dir(),rom->name,"sav",p,(unsigned)n);
 }
 static void persist(void)
 {
@@ -171,7 +175,7 @@ static void paint(unsigned *buf,unsigned pitch,unsigned w,unsigned h)
     int x=((int)w-480)/2,y=((int)h-420)/2;
     char b[96];
     ayaneo_fill(buf,pitch,x,y,480,420,0xe010141cu);
-    ayaneo_text(buf,pitch,x+20,y+16,3,0xffffffffu,"PC Engine");
+    ayaneo_text(buf,pitch,x+20,y+16,3,0xffffffffu,cd_session?"PC Engine CD":"PC Engine");
     for(int i=0;i<SIMPLE_N;i++) {
         unsigned fg=i==selection?0xff101018u:0xffffffffu;
         int yy=y+55+i*32;
@@ -195,12 +199,30 @@ static unsigned menu_keys(unsigned raw)
     if(HELD(raw,PB_R)) k|=IGM_K_R;
     return k;
 }
+/* The scanner stores a shortened display key, not the full filename.
+ * Recover the original CUE name by its cached directory entry identity. */
+static int find_cue(char *name,size_t cap)
+{
+    const char *dir=gba_sd_rom_dir(rom);
+    fat_dir d;fat_dirent e;
+    if(!dir||rom->arc||fat_opendir(vol,dir,&d))return -1;
+    while(fat_readdir(&d,&e)){
+        if(e.is_dir||e.first_clus!=rom->first_clus||e.size!=rom->size||
+           e.ex_nofat!=rom->ex_nofat)continue;
+        const char *ext=strrchr(e.name,'.');
+        size_t n=strlen(e.name);
+        if(!ext||!fat_name_eq(ext,".cue")||n>=cap||n>240)continue;
+        memcpy(name,e.name,n+1);return 0;
+    }
+    return -1;
+}
 static void session_body(void)
 {
     unsigned n,sn;
     size_t bram_size;
     int oldaspect=g_genesis_aspect,oldfilter=g_genesis_filter;
     unsigned oldratio=g_genesis_aspect_x1000,prev=~0u,prevkeys=~0u;
+    cd_session=rom->type==GBA_CONSOLE_PCECD; cd_io_started=0;
     g_pce_frames=0; g_pce_loadrc=-1; width=height=0;
     opened=exit_game=menu=rich_menu=slot=selection=dirty=0; settings_age=0; status[0]=0;
     /* Menu launch animation may have muted the game audio. No punch animation
@@ -208,18 +230,26 @@ static void session_body(void)
     gba_punch_ready=0; ayaneo_gbc_audio_pause(0);
     api=pce_core_load(vol,(int *)&g_pce_loaderr);
     if(!api) goto fail;
-    n=gba_sd_load_rom(vol,rom,ROM_BUF,ROM_CAP);
-    if(!n) goto fail;
-    g_pce_loadrc=api->open(ROM_BUF,n,&callbacks);
+    if(cd_session){
+        char cue[256];
+        if(find_cue(cue,sizeof cue)||pce_sd_io_begin(vol,gba_sd_rom_dir(rom)))goto fail;
+        cd_io_started=1;
+        g_pce_loadrc=api->open_cd(cue,&pce_sd_io,&callbacks);
+    }else{
+        n=gba_sd_load_rom(vol,rom,ROM_BUF,ROM_CAP);
+        if(!n) goto fail;
+        g_pce_loadrc=api->open(ROM_BUF,n,&callbacks);
+    }
     if(g_pce_loadrc) goto fail;
     opened=1;
     bram_size=api->bram_size();
     if(!bram_size || bram_size>32768 || !api->bram()) goto fail;
-    sn=gba_sd_read_named(vol,"/saves/pce",rom->name,"sav",STATE_BUF,(unsigned)bram_size+1);
+    sn=gba_sd_read_named(vol,save_dir(),rom->name,"sav",STATE_BUF,(unsigned)bram_size+1);
     if(sn && sn!=bram_size) goto fail;
     if(sn) memcpy(api->bram(),STATE_BUF,sn);
     igm.game=rom->uname[0]?rom->uname:rom->name;
-    pico_input_game(vol,GBA_CONSOLE_PCE,rom->name,&igm,-1);
+    igm.system=rom->type;
+    pico_input_game(vol,rom->type,rom->name,&igm,-1);
     g_genesis_aspect=1; g_genesis_filter=0; g_genesis_aspect_x1000=1200;
     ayaneo_dsi_set_fps_milli(59820);
     { char e[4]; if(!HELD(pico_input_raw(),PB_B) && gba_launch_state(e)) (void)load_state(e); }
@@ -281,6 +311,7 @@ static void session_body(void)
     (void)battery_save(); (void)save_state("sus");
     if(width&&height) genesis_menu_arm_reverse(VIDEO_BUF,width,height,width);
     api->close(); opened=0;
+    if(cd_io_started){pce_sd_io_end();cd_io_started=0;}
     pico_input_game_end();
     pico_igm_overlay(0); ayaneo_menu_overlay(0,0);
     ayaneo_snes_rsz_restore(); ayaneo_dsi_set_vfp(ayaneo_dsi_default_vfp());
@@ -289,6 +320,7 @@ static void session_body(void)
 fail:
     gba_rom_set_error(RA_ERR_START);
     if(opened && api) api->close();
+    if(cd_io_started){pce_sd_io_end();cd_io_started=0;}
     opened=0; api=0; ayaneo_menu_audio_silence();
 }
 static thread_t *worker;

@@ -2468,6 +2468,7 @@ const char *gba_state_dir_of(int system)
 	case GBA_CONSOLE_NES: return "/states/nes";
 	case GBA_CONSOLE_LYNX: return "/states/lynx";
 	case GBA_CONSOLE_PCE: return "/states/pce";
+	case GBA_CONSOLE_PCECD: return "/states/pcecd";
 	default: return "/states/genesis";   /* Mega Drive, Master System, Game Gear, SG-1000 */
 	}
 }
@@ -3718,7 +3719,7 @@ static int emu_thread(void *arg)
 						s_gpsp_dirty = 1;
 						continue;
 					}
-					if (s_roms[sel].type == GBA_CONSOLE_PCE) {
+					if (s_roms[sel].type == GBA_CONSOLE_PCE || s_roms[sel].type == GBA_CONSOLE_PCECD) {
 						pce_sd_session(&s_sd_vol, &s_roms[sel]);
 						s_gpsp_dirty = 1;
 						continue;
@@ -4202,7 +4203,7 @@ static int emu_thread(void *arg)
 							s_gpsp_dirty = 1;
 							continue;
 						}
-						if (s_roms[sel].type == GBA_CONSOLE_PCE) {
+						if (s_roms[sel].type == GBA_CONSOLE_PCE || s_roms[sel].type == GBA_CONSOLE_PCECD) {
 							pce_sd_session(&s_sd_vol, &s_roms[sel]);
 							s_gpsp_dirty = 1;
 							continue;

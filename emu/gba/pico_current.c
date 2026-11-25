@@ -117,7 +117,7 @@ extern void ayaneo_canvas_dims(unsigned int *cw, unsigned int *ch);
 #define CUR_COMP_MAX  0x00800000u
 #define CUR_MAGIC_Z   0x5A534E53u     /* "SNSZ", the deflate wrapper of every menu pack */
 
-#define NSYS          11               /* GBA_CONSOLE_GB .. GBA_CONSOLE_PCE, the art in the same order */
+#define NSYS          12               /* GBA_CONSOLE_GB .. GBA_CONSOLE_PCECD, the art in the same order */
 #define NRECENT       10
 #define LIB_ROWS      7
 #define NTHEMES       8
@@ -685,7 +685,7 @@ static struct {
 
 static void art_load(void)
 {
-	static const char *sys[NSYS] = { "gb", "gbc", "gba", "snes", "genesis", "sms", "gg", "sg", "nes", "lynx", "pce" };
+	static const char *sys[NSYS] = { "gb", "gbc", "gba", "snes", "genesis", "sms", "gg", "sg", "nes", "lynx", "pce", "pcecd" };
 	static const char *rail[3] = { "games", "resume", "settings" };
 	static const char *setic[SET_N] = { "sun", "sound", "bfi", "display", "colour", "bios", "rsm", "power",
 					    "bios", "display", "mute", "rsm", "rsm", "rsm", "language", "clock",
@@ -738,7 +738,7 @@ static void art_load(void)
 enum { TAB_GAMES, TAB_RESUME, TAB_SETTINGS, TAB_LINK, TAB_NET };
 #define NTABS (PICO_LINK ? 5 : 3)        /* the Link and Network tabs only where there is Bluetooth and Wi-Fi */
 static const char *s_sysname[NSYS] = { "Game Boy", "Game Boy Color", "Game Boy Advance", "Super Nintendo",
-					"Mega Drive / Genesis", "Master System", "Game Gear", "SG-1000", "NES", "Atari Lynx", "PC Engine" };
+					"Mega Drive / Genesis", "Master System", "Game Gear", "SG-1000", "NES", "Atari Lynx", "PC Engine", "PC Engine CD" };
 
 static struct {
 	int ready;                        /* the state below survives from one menu run to the next */
@@ -803,7 +803,7 @@ static int roster_build(void)
 		/* the systems in the carousel's order: Nintendo's by age, then Sega's (the NES's type number
 		 * came last, so the order is a table rather than the numbers) */
 		static const unsigned char k_order[NSYS] = { GBA_CONSOLE_GB, GBA_CONSOLE_GBC, GBA_CONSOLE_GBA,
-			GBA_CONSOLE_NES, GBA_CONSOLE_SNES, GBA_CONSOLE_GENESIS, GBA_CONSOLE_SMS, GBA_CONSOLE_GG, GBA_CONSOLE_SG, GBA_CONSOLE_LYNX, GBA_CONSOLE_PCE };
+			GBA_CONSOLE_NES, GBA_CONSOLE_SNES, GBA_CONSOLE_GENESIS, GBA_CONSOLE_SMS, GBA_CONSOLE_GG, GBA_CONSOLE_SG, GBA_CONSOLE_LYNX, GBA_CONSOLE_PCE, GBA_CONSOLE_PCECD };
 		int n = 0;
 		t = k_order[o];
 		for (i = 0; i < s_nrom; i++)
@@ -1630,7 +1630,7 @@ static const char *const k_kb[4] = { "ABCDEFGHIJ", "KLMNOPQRST", "UVWXYZ'&-.", "
 #define KB_ROWS 5                      /* four of keys, and Space / Delete / Clear */
 enum { KB_SPACE, KB_DEL, KB_CLEAR };
 static int kb_special(int c) { return c < 4 ? KB_SPACE : c < 7 ? KB_DEL : KB_CLEAR; }
-static const char *const k_short[NSYS] = { "GB", "GBC", "GBA", "SNES", "MD", "SMS", "GG", "SG", "NES", "LYNX", "PCE" };
+static const char *const k_short[NSYS] = { "GB", "GBC", "GBA", "SNES", "MD", "SMS", "GG", "SG", "NES", "LYNX", "PCE", "PCE CD" };
 
 static char lower(char c) { return c >= 'A' && c <= 'Z' ? (char)(c + 32) : c; }
 /* where word w (n letters, lower case) is in name s, without case: -1 none, else 0 at the start,

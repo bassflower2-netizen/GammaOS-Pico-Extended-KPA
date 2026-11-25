@@ -33,7 +33,8 @@ enum {
 	GBA_CONSOLE_SG      = 7,   /* /roms/sg      *.sg            - Genesis-Plus-GX (SG-1000) */
 	GBA_CONSOLE_NES     = 8,   /* /roms/nes     *.nes/.unf/.fds - armNES (NES, Famicom, Disk System) */
 	GBA_CONSOLE_LYNX    = 9,   /* /roms/lynx *.lnx/.o - Handy */
-	GBA_CONSOLE_PCE     = 10   /* /roms/pce *.pce - HuCard */
+	GBA_CONSOLE_PCE     = 10,  /* /roms/pce *.pce - HuCard */
+	GBA_CONSOLE_PCECD   = 11   /* /roms/pcecd *.cue - streamed CD */
 };
 
 /* One ROM found on the card (name kept for display + save/state matching). */

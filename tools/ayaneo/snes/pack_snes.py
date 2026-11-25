@@ -945,7 +945,7 @@ def main():
                       ("logo_gba", args.logo_gba), ("logo_snes", args.logo_snes),
                       ("logo_genesis", args.logo_genesis), ("logo_sms", args.logo_sms),
                       ("logo_gg", args.logo_gg), ("logo_sg", args.logo_sg),
-                      ("logo_nes", args.logo_nes), ("logo_lynx", args.logo_lynx), ("logo_pce", args.logo_pce)):
+                      ("logo_nes", args.logo_nes), ("logo_lynx", args.logo_lynx), ("logo_pce", args.logo_pce), ("logo_pcecd", args.logo_pce)):
         if path:
             lidx = add_image(path, tile=False)
             if lidx is not None:
