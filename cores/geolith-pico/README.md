@@ -9,3 +9,6 @@ Next: inspect actual results, use direct memory APIs and RGB565 conversion rathe
 
 ## Stage 2: native engine probe
 Host and ARM Linux synthetic cartridge tests passed at 8ba3df2 (run 45653382484). The new bare-metal job compiles the upstream engine C translation units selected by the pinned Makefile with ARMv7 soft-float/newlib, combines them into a relocatable object and reports unresolved imports. Frontend and external dependency objects, final native linking, memory arena, RGB565 adapter and LK integration remain outstanding. This is not a runnable blob and must not be packaged.
+
+## Stage 3: native ZIP and audio dependencies
+Stage 2 passed at d555bda (runs 45653983122 and 45653983923). The native object now includes bundled miniz and Speex resampler sources and CI asserts their engine imports are resolved. CHD, filesystem, allocator, time and final linking remain open. No firmware integration yet.
