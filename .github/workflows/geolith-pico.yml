@@ -1,0 +1,57 @@
+name: Neo Geo Geolith port probes
+on:
+  workflow_dispatch:
+  push:
+    branches: [extended/lynx]
+    paths:
+      - 'cores/geolith-pico/**'
+      - '.github/workflows/geolith-pico.yml'
+permissions:
+  contents: read
+jobs:
+  runtime:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [host, arm-linux-soft]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: libretro/geolith-libretro
+          ref: 846c5b541b42c122105b2a1bb29830ba03e93058
+          path: geo-upstream
+          persist-credentials: false
+      - name: Install test compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabi qemu-user zlib1g-dev
+          if [ "${{ matrix.arch }}" = arm-linux-soft ]; then
+            sudo dpkg --add-architecture armel
+            sudo apt-get update
+            sudo apt-get install -y zlib1g-dev:armel
+          fi
+      - name: Compile and test original synthetic cartridge
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -eu
+          CC=gcc
+          FLAGS=""
+          if [ "$ARCH" = arm-linux-soft ]; then
+            CC=arm-linux-gnueabi-gcc
+            FLAGS="-march=armv7-a -mfloat-abi=soft -marm"
+          fi
+          make -C geo-upstream/libretro -j2 platform=unix CC="$CC" EXTRA_INCLUDES="$FLAGS"
+          python3 cores/geolith-pico/fixture.py "$RUNNER_TEMP/geo-fixture"
+          "$CC" $FLAGS -std=c99 -Wall -Wextra -Igeo-upstream/libretro \
+            cores/geolith-pico/neo_format.c cores/geolith-pico/smoke.c \
+            "$PWD/geo-upstream/libretro/geolith_libretro.so" -Wl,-rpath,"$PWD/geo-upstream/libretro" -o "$RUNNER_TEMP/geo-smoke"
+          if [ "$ARCH" = host ]; then
+            timeout 90s "$RUNNER_TEMP/geo-smoke" "$RUNNER_TEMP/geo-fixture"
+          else
+            arm-linux-gnueabi-readelf -h "$RUNNER_TEMP/geo-smoke"
+            timeout 120s qemu-arm -L /usr/arm-linux-gnueabi "$RUNNER_TEMP/geo-smoke" "$RUNNER_TEMP/geo-fixture"
+          fi
