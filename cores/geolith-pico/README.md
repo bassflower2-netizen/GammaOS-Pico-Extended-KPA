@@ -21,3 +21,6 @@ At ade32f41 the integration build passed (45668259114), and both runtime archite
 
 ## Stage 6: directory entry type coverage
 At 1caacd9 integration run 45682465913 and both runtime jobs passed; native-engine run 45682465862 failed compiling vfs_implementation.c because DT_LNK was undeclared. Add the conventional distinct link type value and a strict standalone ARM compiler probe of the directory ABI. This only declares a type; it does not enable symlink traversal or supply fake filesystem operations. Existing unresolved-import checks remain intact. Native build results pending; real filesystem adapter and final link still outstanding.
+
+## Stage 7: native timestamp declaration
+At fc1b8ee integration run 45700844197 and both runtime jobs passed; native-engine job 139510202410 in run 45700844178 failed on implicit utime declaration in miniz. Add a private POSIX-compatible declaration using time_t and compile-check its signature. Keep utime unresolved until a real platform adapter is linked. No timestamp writes or firmware packaging enabled. Native CI pending. Zlib configure also reported unsafe vsprintf fallback; resolve before final native linking/packaging.

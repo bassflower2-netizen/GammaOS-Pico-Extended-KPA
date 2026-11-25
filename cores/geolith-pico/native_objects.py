@@ -18,8 +18,10 @@ arch = ["-march=armv7-a", "-mfloat-abi=soft", "-marm"]
 subprocess.run(["arm-none-eabi-gcc", *arch, "-I" + str(native_headers),
                 "-std=c11", "-Wall", "-Werror", "-x", "c", "-fsyntax-only", "-"],
                input="""#include <dirent.h>
+#include <utime.h>
 _Static_assert(DT_UNKNOWN == 0 && DT_DIR == 4 && DT_REG == 8 && DT_LNK == 10,
                "directory type ABI mismatch");
+int (*timestamp_update)(const char *, const struct utimbuf *) = utime;
 int classify(const struct dirent *e) {
     return e->d_type == DT_LNK || e->d_type == DT_DIR;
 }
@@ -54,7 +56,7 @@ imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(combined)], tex
 (out / "undefined.txt").write_text(imports)
 missing = {line.split()[-1] for line in imports.splitlines() if line.strip()}
 assert not any(s.startswith(("mz_zip_", "geo_resampler_", "chd_", "inflate", "ZSTD_", "Lzma")) for s in missing), missing
-assert {"opendir", "readdir", "closedir"} <= missing, "Directory ABI must remain explicit until a platform adapter is linked"
+assert {"opendir", "readdir", "closedir", "utime"} <= missing, "Directory and timestamp ABI must remain explicit until a platform adapter is linked"
 print("ZIP and audio resampler dependencies resolved; directory ABI remains unresolved")
 subprocess.run(["arm-none-eabi-readelf", "-h", str(combined)], check=True)
 print(f"Compiled {len(objects)} native engine objects. Unresolved imports:\n{imports}")
