@@ -10,6 +10,18 @@ plan = subprocess.check_output(["make", "-Bn", "platform=unix", "CC=arm-none-eab
 objects = []
 zlib = pathlib.Path(sys.argv[3]).resolve()
 assert (zlib / "lib/libz.a").is_file()
+# Reuse the type-checked newlib format shim already used by PCE/Handy.
+compat = pathlib.Path(__file__).resolve().parent.parent / "handy-pico/native_inttypes.h"
+arch = ["-march=armv7-a", "-mfloat-abi=soft", "-marm"]
+for fmt in ("u", "lu"):
+    check = '#include <stdio.h>\n#include <stdint.h>\nvoid check(uintptr_t p) { printf("%' + fmt + '", p); }\n'
+    if subprocess.run(["arm-none-eabi-gcc", *arch, "-Wformat=2", "-Werror", "-x", "c", "-fsyntax-only", "-"], input=check, text=True, capture_output=True).returncode == 0:
+        break
+else:
+    raise RuntimeError("No matching uintptr_t format")
+shim = out / "native_inttypes.h"
+shim.write_text('#define HANDY_PRIUPTR "' + fmt + '"\n#include "' + str(compat) + '"\n')
+subprocess.run(["arm-none-eabi-gcc", *arch, "-include", str(shim), "-Wformat=2", "-Werror", "-x", "c", "-fsyntax-only", "-"], input='#include <stdio.h>\nvoid check(int64_t i,uint64_t u,uintptr_t p) { printf("%" PRId64 " %" PRIu64 " %" PRIuPTR,i,u,p); }\n', text=True, check=True)
 for line in plan.splitlines():
     if not line.startswith("arm-none-eabi-gcc "):
         continue
@@ -20,7 +32,7 @@ for line in plan.splitlines():
     src = sources[0]
     obj = out / (src.removeprefix("../").replace("/", "_") + ".o")
     flags = [a for a in args[1:] if a.startswith(("-I", "-D")) and not a.startswith("-DGIT_VERSION")]
-    subprocess.run(["arm-none-eabi-gcc", "-march=armv7-a", "-mfloat-abi=soft", "-marm", "-ffreestanding", "-fno-common", "-Os", "-I" + str(zlib / "include"), *flags, "-c", src, "-o", str(obj)], cwd=cwd, check=True)
+    subprocess.run(["arm-none-eabi-gcc", "-march=armv7-a", "-mfloat-abi=soft", "-marm", "-ffreestanding", "-fno-common", "-Os", "-D__STDC_FORMAT_MACROS=1", "-D__STDC_LIMIT_MACROS=1", "-D__STDC_CONSTANT_MACROS=1", "-include", str(shim), "-I" + str(zlib / "include"), *flags, "-c", src, "-o", str(obj)], cwd=cwd, check=True)
     objects.append(obj)
 assert len(objects) >= 15, f"Unexpected engine source count: {len(objects)}"
 combined = out / "geolith-engine.o"
