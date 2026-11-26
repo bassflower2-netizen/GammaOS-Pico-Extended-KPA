@@ -139,6 +139,39 @@ int geo_sd_bios_member_copy_stored(const geo_zip_member *member,void *dst,
     return 0;
 }
 
+
+/* Raw DEFLATE is supplied by the platform: no host zlib dependency in the
+ * bare-metal translation unit. Never report success without full input
+ * consumption, exact output size and the ZIP central-directory CRC32. */
+int geo_sd_bios_member_decode(const geo_zip_member *member,void *dst,size_t cap,
+                              geo_zip_raw_inflater inflater,void *context,
+                              size_t *written)
+{
+    if(!written)return -1;
+    *written=0;
+    if(!member||!member->data||!dst||!member->uncompressed_size||
+       member->uncompressed_size>8u*1024u*1024u||
+       (size_t)member->uncompressed_size>cap)return -1;
+    if(member->method==0)
+        return geo_sd_bios_member_copy_stored(member,dst,cap,written);
+    if(member->method!=8||!inflater||!member->compressed_size)return -1;
+    uint32_t consumed=0,produced=0;
+    if(inflater(context,member->data,member->compressed_size,dst,
+                member->uncompressed_size,&consumed,&produced)||
+       consumed!=member->compressed_size||
+       produced!=member->uncompressed_size)return -1;
+    uint32_t crc=UINT32_MAX;
+    const unsigned char *p=dst;
+    for(uint32_t i=0;i<produced;i++){
+        crc^=p[i];
+        for(unsigned bit=0;bit<8;bit++)
+            crc=(crc>>1)^(0xedb88320u&(0u-(crc&1u)));
+    }
+    if((crc^UINT32_MAX)!=member->crc32)return -1;
+    *written=produced;
+    return 0;
+}
+
 /* Fixed BIOS names only; caller owns buffer and validates ZIP contents. */
 int geo_sd_bios_load(fat_vol *v,int aes,void *dst,size_t cap,size_t *loaded)
 {

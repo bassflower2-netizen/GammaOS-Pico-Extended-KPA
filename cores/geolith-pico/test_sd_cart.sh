@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
-cc -O2 -Wall -Wextra cores/geolith-pico/{sd_cart,sd_cart_test,cart_io,neo_format}.c emu/gba/{fat_ro,fat_exfat}.c -o "$W/test"
+cc -O2 -Wall -Wextra cores/geolith-pico/{sd_cart,sd_cart_test,cart_io,neo_format}.c emu/gba/{fat_ro,fat_exfat}.c -lz -o "$W/test"
 python3 - "$W" <<'PY'
 import pathlib,struct,sys
 w=pathlib.Path(sys.argv[1])

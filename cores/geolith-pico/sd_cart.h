@@ -20,4 +20,14 @@ int geo_sd_bios_member_find(const void *,size_t,const char *,geo_zip_member *);
 /* Only classic STORED members (method 0); CRC32 must match before copy.
  * Caller must only use spans returned from a validated archive. */
 int geo_sd_bios_member_copy_stored(const geo_zip_member *,void *,size_t,size_t *);
+/* Called for method 8 with raw DEFLATE input (no zlib/gzip wrapper).
+ * Implementations must report exact consumed and produced byte counts.
+ * On error, output bytes are invalid even if the destination was modified.
+ * Method 0 uses the existing checked STORED copy and ignores inflater. */
+typedef int (*geo_zip_raw_inflater)(void *context,const unsigned char *input,
+                                    uint32_t input_size,void *output,
+                                    uint32_t output_capacity,
+                                    uint32_t *consumed,uint32_t *produced);
+int geo_sd_bios_member_decode(const geo_zip_member *,void *,size_t,
+                              geo_zip_raw_inflater,void *,size_t *);
 #endif

@@ -2,6 +2,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <zlib.h>
 #define SIZE (4096u+0x100000u+0x10000u+0x10000u+1u+0x100000u)
 static unsigned char dst[SIZE+1];
 static int fail;
@@ -11,6 +13,33 @@ static unsigned rd(void *ctx,uint32_t lba,uint32_t n,void *p)
     if(fail||fseek(f,(long)lba*512,SEEK_SET))return 0;
     return (unsigned)fread(p,512,n,f);
 }
+
+/* CI-only host adapter; the core itself has no zlib linkage requirement. */
+static int raw_inflate(void *ctx,const unsigned char *src,uint32_t src_len,
+                       void *dst,uint32_t capacity,uint32_t *consumed,
+                       uint32_t *produced)
+{
+    (void)ctx;
+    z_stream z={0};
+    z.next_in=(Bytef *)src;z.avail_in=src_len;
+    z.next_out=dst;z.avail_out=capacity;
+    if(inflateInit2(&z,-MAX_WBITS)!=Z_OK)return -1;
+    int rc=inflate(&z,Z_FINISH);
+    *consumed=(uint32_t)z.total_in;
+    *produced=(uint32_t)z.total_out;
+    inflateEnd(&z);
+    return rc==Z_STREAM_END?0:-1;
+}
+static int fake_inflate(void *ctx,const unsigned char *src,uint32_t src_len,
+                        void *dst,uint32_t capacity,uint32_t *consumed,
+                        uint32_t *produced)
+{
+    (void)ctx;(void)src;(void)dst;
+    *consumed=src_len-1;*produced=capacity;
+    return 0;
+}
+static unsigned char bios_payload[0x20000+1];
+
 int main(int argc,char **argv)
 {
     assert(argc==2);
@@ -37,6 +66,26 @@ int main(int argc,char **argv)
     assert(geo_sd_bios_member_find(dst,loaded,"neo-po.bin",NULL)<0);
     assert(geo_sd_bios_member_find(dst,loaded,NULL,&m)<0);
     assert(geo_sd_bios_member_find(dst,loaded,"neo-po.bin",&m)==0);
+
+    size_t bios_written=99;
+    memset(bios_payload,0xa5,sizeof bios_payload);
+    assert(!geo_sd_bios_member_decode(&m,bios_payload,sizeof bios_payload,
+                                     raw_inflate,NULL,&bios_written));
+    assert(bios_written==0x20000&&bios_payload[bios_written]==0xa5);
+    geo_zip_member invalid=m;
+    invalid.crc32^=1u;
+    assert(geo_sd_bios_member_decode(&invalid,bios_payload,sizeof bios_payload,
+                                    raw_inflate,NULL,&bios_written)<0&&bios_written==0);
+    assert(geo_sd_bios_member_decode(&m,bios_payload,0x1ffffu,
+                                    raw_inflate,NULL,&bios_written)<0&&bios_written==0);
+    assert(geo_sd_bios_member_decode(&m,bios_payload,sizeof bios_payload,
+                                    fake_inflate,NULL,&bios_written)<0&&bios_written==0);
+    invalid=m;invalid.compressed_size--;
+    assert(geo_sd_bios_member_decode(&invalid,bios_payload,sizeof bios_payload,
+                                    raw_inflate,NULL,&bios_written)<0&&bios_written==0);
+    assert(geo_sd_bios_member_decode(&m,bios_payload,sizeof bios_payload,
+                                    NULL,NULL,&bios_written)<0&&bios_written==0);
+
     /* Deflate bytes are not safe to pass to the engine as uncompressed BIOS. */
     if(m.method==8){
         size_t n=99;
