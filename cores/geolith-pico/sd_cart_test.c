@@ -40,6 +40,28 @@ int main(int argc,char **argv)
     assert(!geo_sd_bios_load(&v,1,dst,SIZE,&loaded)&&loaded>22);
     assert(dst[0]=='P'&&dst[1]=='K');
     assert(!geo_sd_bios_zip_directory_valid(dst,loaded));
+    /* Real FAT -> ZIP directory -> native zlib -> CRC-checked payload. */
+    size_t chained=99;
+    memset(bios_payload,0xa5,sizeof bios_payload);
+    assert(!geo_sd_bios_member_from_fat(&v,1,"neo-po.bin",dst,SIZE,
+            bios_payload,sizeof bios_payload,geo_zip_zlib_raw_inflate,NULL,&chained));
+    assert(chained==0x20000&&bios_payload[chained]==0xa5);
+    assert(geo_sd_bios_member_from_fat(&v,1,"missing.bin",dst,SIZE,
+            bios_payload,sizeof bios_payload,geo_zip_zlib_raw_inflate,NULL,&chained)<0
+            &&chained==0);
+    assert(geo_sd_bios_member_from_fat(&v,1,"neo-po.bin",dst,SIZE,
+            bios_payload,0x1ffff,geo_zip_zlib_raw_inflate,NULL,&chained)<0
+            &&chained==0);
+    assert(geo_sd_bios_member_from_fat(&v,1,"neo-po.bin",dst,SIZE,
+            (unsigned char *)dst+4,sizeof bios_payload,geo_zip_zlib_raw_inflate,NULL,&chained)<0
+            &&chained==0);
+    assert(geo_sd_bios_member_from_fat(&v,1,"neo-po.bin",dst,SIZE,
+            bios_payload,sizeof bios_payload,NULL,NULL,&chained)<0&&chained==0);
+    assert(!geo_sd_bios_member_from_fat(&v,0,"sp-u2.sp1",dst,SIZE,
+            bios_payload,sizeof bios_payload,geo_zip_zlib_raw_inflate,NULL,&chained));
+    assert(chained==0x20000);
+    /* Restore AES archive so the original ZIP mutation tests still apply. */
+    assert(!geo_sd_bios_load(&v,1,dst,SIZE,&loaded));
     geo_zip_member m={0};
     assert(!geo_sd_bios_member_find(dst,loaded,"neo-po.bin",&m));
     assert(m.data>=dst&&m.data<dst+loaded&&m.compressed_size>0);

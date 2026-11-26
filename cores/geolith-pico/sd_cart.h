@@ -30,4 +30,10 @@ typedef int (*geo_zip_raw_inflater)(void *context,const unsigned char *input,
                                     uint32_t *consumed,uint32_t *produced);
 int geo_sd_bios_member_decode(const geo_zip_member *,void *,size_t,
                               geo_zip_raw_inflater,void *,size_t *);
+/* End-to-end read-only FAT16/FAT32 BIOS member loading. Archives and
+ * output must occupy disjoint caller-owned buffers; outputs are invalid on
+ * failure. This does not initialize Geolith or reserve device RAM. */
+int geo_sd_bios_member_from_fat(fat_vol *,int,const char *,
+                                void *,size_t,void *,size_t,
+                                geo_zip_raw_inflater,void *,size_t *);
 #endif

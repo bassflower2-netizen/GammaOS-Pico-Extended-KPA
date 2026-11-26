@@ -75,3 +75,6 @@ At 6386917 both workflows passed (45814857149 and 45814857083), including host F
 
 ## Repair native ZIP workflow YAML
 At c0da40f Actions workflow 45817269632 failed at parsing before starting jobs. The workflow text was truncated mid-grep and contained a duplicated job tail. Restore one complete well-formed compile/link/probe section, remove the duplicated tail, and retain explicit unresolved-inflate checks. No safety tests disabled, no firmware packaging; new CI pending.
+
+## Full read-only FAT BIOS member staging
+At ff85c4f both workflows passed (45817348691 and 45817348672), including the real native zlib object probe and FAT16/32 synthetic fixtures. Add a single bounded operation composing SD-FAT archive access, ZIP member selection, raw-DEFLATE/STORED decoding and CRC verification, using disjoint caller-owned archive and decoded-data buffers. Host FAT16/32 regression tests verify AES and MVS synthetic members, missing entries, insufficient output capacity, absent inflater and overlapping buffers. No BIOS/ROM files are bundled, no save writes or firmware Geolith core is enabled. The memory cost of two buffers, ZIP engine handoff, state persistence, native heap sizing and menu entry are still open. New CI pending.

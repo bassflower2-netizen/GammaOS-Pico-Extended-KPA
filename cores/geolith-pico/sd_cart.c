@@ -193,3 +193,27 @@ int geo_sd_bios_load(fat_vol *v,int aes,void *dst,size_t cap,size_t *loaded)
     *loaded=f.size;
     return 0;
 }
+
+/* Read the fixed SD BIOS archive, find one named member, decompress and
+ * CRC-check it into a separate caller-owned buffer. Both buffers are kept
+ * distinct so compressed input cannot be overwritten during inflate. */
+int geo_sd_bios_member_from_fat(fat_vol *v,int aes,const char *name,
+                               void *zip_buf,size_t zip_cap,
+                               void *bios_buf,size_t bios_cap,
+                               geo_zip_raw_inflater inflater,void *context,
+                               size_t *written)
+{
+    if(!written)return -1;
+    *written=0;
+    if(!zip_buf||!bios_buf||!name||!name[0]||!zip_cap||!bios_cap)return -1;
+    /* Test address ranges without pointer ordering of unrelated C objects. */
+    uintptr_t z=(uintptr_t)zip_buf,d=(uintptr_t)bios_buf;
+    if(zip_cap>UINTPTR_MAX-z||bios_cap>UINTPTR_MAX-d)return -1;
+    if(z<d+bios_cap&&d<z+zip_cap)return -1;
+    size_t archive_size=0;
+    if(geo_sd_bios_load(v,aes,zip_buf,zip_cap,&archive_size))return -1;
+    geo_zip_member member;
+    if(geo_sd_bios_member_find(zip_buf,archive_size,name,&member))return -1;
+    return geo_sd_bios_member_decode(&member,bios_buf,bios_cap,
+                                     inflater,context,written);
+}
