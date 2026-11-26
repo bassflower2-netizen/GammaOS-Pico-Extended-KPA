@@ -31,7 +31,16 @@ static int synthetic_accept(void *ctx,const void *bios,size_t length)
 {
     (void)ctx;
     assert(bios==bios_payload&&length==0x20000);
-    assert(((const unsigned char *)bios)[0]==0);
+    /* fixture.py writes big-endian SSP/PC then swaps every 16-bit word.
+     * 00 10 ff 00 00 c0 01 00 -> 10 00 00 ff c0 00 00 01.
+     * Verify the complete original synthetic image, not just one byte. */
+    const unsigned char *p=bios;
+    static const unsigned char reset[]={0x10,0x00,0x00,0xff,0xc0,0x00,0x00,0x01};
+    static const unsigned char vector[]={0xc0,0x00,0x00,0x01};
+    assert(!memcmp(p,reset,sizeof reset));
+    for(size_t i=8;i<0x100;i+=4)assert(!memcmp(p+i,vector,sizeof vector));
+    assert(p[0x100]==0xfe&&p[0x101]==0x60);
+    for(size_t i=0x102;i<length;i++)assert(p[i]==0);
     ++accept_count;
     return accept_fail?-1:0;
 }
