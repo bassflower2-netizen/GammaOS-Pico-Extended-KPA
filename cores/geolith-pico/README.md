@@ -30,3 +30,6 @@ At bb82261 both workflows passed (45704158371 and 45704158379), including the re
 
 ## Stage 9: repair workflow syntax
 At 3c3357c integration run 45711228363 passed, but Geolith run 45711225813 failed before creating any jobs. The native zlib import regex was split by a duplicated workflow tail. Restore the anchored regex and single job tail, retaining the unsafe-import rejection and required-export checks. No native tests ran on that failed workflow; the previous green engine remains bb82261. New CI pending.
+
+## Stage 10: bounded caller-owned heap primitive
+At 917c199 both workflows passed (45719185001 and 45719184672); native compression checks passed. Native imports still include malloc/calloc/realloc/free, stdio, filesystem and time. Add a caller-owned bounded sbrk primitive with alignment and overflow checks, tested on host and ARM Linux and compiled for bare metal. No fixed device RAM reservation, no global newlib hook or firmware packaging yet. Existing PCE/Handy private heaps remain unchanged. Final allocator wiring, filesystem and native link remain open; new CI pending.

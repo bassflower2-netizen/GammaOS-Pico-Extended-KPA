@@ -8,6 +8,8 @@ out.mkdir(parents=True, exist_ok=True)
 cwd = up / "libretro"
 plan = subprocess.check_output(["make", "-Bn", "platform=unix", "CC=arm-none-eabi-gcc"], cwd=cwd, text=True)
 objects = []
+# Compile the caller-owned arena for the native target without reserving device RAM.
+subprocess.run(["arm-none-eabi-gcc", "-march=armv7-a", "-mfloat-abi=soft", "-marm", "-std=c11", "-Wall", "-Wextra", "-Werror", "-ffreestanding", "-c", str(pathlib.Path(__file__).with_name("arena.c").resolve()), "-o", str(out / "arena.o")], check=True)
 zlib = pathlib.Path(sys.argv[3]).resolve()
 assert (zlib / "lib/libz.a").is_file()
 # Reuse the type-checked newlib format shim already used by PCE/Handy.
