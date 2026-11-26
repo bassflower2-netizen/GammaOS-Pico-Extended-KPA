@@ -72,3 +72,6 @@ At 48d2183 both workflows passed (45812191594 and 45812191208), including host F
 
 ## Native zlib raw-inflate adapter
 At 6386917 both workflows passed (45814857149 and 45814857083), including host FAT fixtures and bare-metal newlib QEMU allocator execution. Move the previously CI-only raw DEFLATE adapter into geo_zlib.c, compile it as freestanding ARMv7/newlib against pinned zlib headers and link it into a relocatable object with the native static zlib archive. Host FAT16/32 fixtures now exercise this same adapter with CRC/size checks and invalid-input tests. zlib's temporary allocation still requires a correctly initialized bounded newlib heap on hardware; no device heap sizing or final Geolith executable is claimed. CI pending. Open: native filesystem/session binding, true BIOS handoff, save states, menu integration, RAM measurement and hardware validation.
+
+## Repair native ZIP workflow YAML
+At c0da40f Actions workflow 45817269632 failed at parsing before starting jobs. The workflow text was truncated mid-grep and contained a duplicated job tail. Restore one complete well-formed compile/link/probe section, remove the duplicated tail, and retain explicit unresolved-inflate checks. No safety tests disabled, no firmware packaging; new CI pending.
