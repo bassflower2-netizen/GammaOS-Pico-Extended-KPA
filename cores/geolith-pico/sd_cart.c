@@ -271,3 +271,16 @@ int geo_sd_bios_set_load(fat_vol *v,int aes,const char *program,
     }
     return 0;
 }
+
+/* Publish the complete validated set in one operation, never a partial set. */
+int geo_sd_bios_set_handoff(fat_vol *v,int aes,const char *program,
+                            void *archive,size_t archive_cap,
+                            geo_bios_slot slots[4],geo_zip_raw_inflater inflater,
+                            void *inflate_context,geo_bios_set_accept accept,
+                            void *accept_context)
+{
+    if(!accept)return -1;
+    if(geo_sd_bios_set_load(v,aes,program,archive,archive_cap,slots,
+                            inflater,inflate_context))return -1;
+    return accept(accept_context,aes,slots);
+}

@@ -87,3 +87,6 @@ At 8b7a8e6 integration 45824158875 succeeded; Neo Geo 45824158919 failed only in
 
 ## Stage complete baseline BIOS set
 At 53c777c both workflows passed (45835124886, 45835123893). Stage program, LO, SFIX and SM1 from one FAT archive read, checking exact sizes, CRC and disjoint destination spans. FAT fixture tests cover AES/MVS, auxiliary ROM contents, missing program, overlapping slots and short capacity. All outputs invalid on failure. No engine start or firmware menu enabled; native engine binding and RAM allocation remain open. New CI pending.
+
+## Complete BIOS set publication
+At 26a4d59 both workflows passed (45855122835 and 45855122915), including FAT16/32 fixtures, ARM runtime, native allocator and integration. Add a single callback publication of the four validated BIOS slots, rejecting missing data before callback and propagating callback refusal. Regression tests cover success, missing member and null/refusing callback. This remains an adapter boundary, not actual Geolith execution; native engine binding, memory sizing, saves and menus remain open. New CI pending; no hardware tests.

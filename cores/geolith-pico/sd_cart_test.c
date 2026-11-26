@@ -46,6 +46,17 @@ static int synthetic_accept(void *ctx,const void *bios,size_t length)
     return accept_fail?-1:0;
 }
 
+static unsigned set_calls;
+static int accept_set(void *ctx,int aes,const geo_bios_slot slots[4])
+{
+    assert(aes==1);
+    assert(slots[0].data==bios_payload);
+    assert(((const unsigned char *)slots[1].data)[0]==0);
+    assert(((const unsigned char *)slots[2].data)[0]==0);
+    assert(((const unsigned char *)slots[3].data)[0]==0x76);
+    ++set_calls;
+    return ctx?-1:0;
+}
 int main(int argc,char **argv)
 {
     assert(argc==2);
@@ -124,6 +135,19 @@ int main(int argc,char **argv)
                                 geo_zip_zlib_raw_inflate,NULL));
     assert(geo_sd_bios_set_load(&v,0,"missing.bin",dst,SIZE,slots,
                                 geo_zip_zlib_raw_inflate,NULL)<0);
+    set_calls=0;
+    assert(!geo_sd_bios_set_handoff(&v,1,"neo-po.bin",dst,SIZE,slots,
+        geo_zip_zlib_raw_inflate,NULL,accept_set,NULL));
+    assert(set_calls==1);
+    assert(geo_sd_bios_set_handoff(&v,1,"missing.bin",dst,SIZE,slots,
+        geo_zip_zlib_raw_inflate,NULL,accept_set,NULL)<0);
+    assert(set_calls==1);
+    assert(geo_sd_bios_set_handoff(&v,1,"neo-po.bin",dst,SIZE,slots,
+        geo_zip_zlib_raw_inflate,NULL,accept_set,&set_calls)<0);
+    assert(set_calls==2);
+    assert(geo_sd_bios_set_handoff(&v,1,"neo-po.bin",dst,SIZE,slots,
+        geo_zip_zlib_raw_inflate,NULL,NULL,NULL)<0);
+    assert(set_calls==2);
     slots[3].data=sfix;
     assert(geo_sd_bios_set_load(&v,1,"neo-po.bin",dst,SIZE,slots,
                                 geo_zip_zlib_raw_inflate,NULL)<0);
