@@ -44,4 +44,10 @@ int geo_sd_bios_handoff(fat_vol *,int,const char *,
                         void *,size_t,void *,size_t,size_t,
                         geo_zip_raw_inflater,void *,
                         geo_bios_accept,void *);
+/* Four slots in order: program BIOS, LO, SFIX, SM1. All contents invalid
+ * on failure; caller must not start engine until success. Fixed sizes are
+ * the baseline system ROM layout, not support for every BIOS variant. */
+typedef struct { void *data; size_t capacity; } geo_bios_slot;
+int geo_sd_bios_set_load(fat_vol *,int,const char *,void *,size_t,
+                         geo_bios_slot [4],geo_zip_raw_inflater,void *);
 #endif

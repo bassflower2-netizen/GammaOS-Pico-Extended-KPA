@@ -237,3 +237,37 @@ int geo_sd_bios_handoff(fat_vol *v,int aes,const char *member_name,
                                   &decoded)||decoded!=expected_size)return -1;
     return accept(accept_context,bios_buf,decoded);
 }
+
+/* Load one archive once, then stage the required system ROMs into separate
+ * caller-owned buffers. No engine state is touched by this operation. */
+int geo_sd_bios_set_load(fat_vol *v,int aes,const char *program,
+                         void *archive,size_t archive_cap,
+                         geo_bios_slot slots[4],geo_zip_raw_inflater inflater,
+                         void *context)
+{
+    static const char *const common[3]={"000-lo.lo","sfix.sfix","sm1.sm1"};
+    static const size_t sizes[4]={0x20000,0x10000,0x20000,0x20000};
+    if(!slots||!archive||!archive_cap||!program||!program[0])return -1;
+    uintptr_t a=(uintptr_t)archive;
+    if(archive_cap>UINTPTR_MAX-a)return -1;
+    for(unsigned i=0;i<4;i++){
+        uintptr_t p=(uintptr_t)slots[i].data;
+        if(!p||slots[i].capacity<sizes[i]||sizes[i]>UINTPTR_MAX-p||
+           (p<a+archive_cap&&a<p+sizes[i]))return -1;
+        for(unsigned j=0;j<i;j++){
+            uintptr_t q=(uintptr_t)slots[j].data;
+            if(p<q+sizes[j]&&q<p+sizes[i])return -1;
+        }
+    }
+    size_t loaded=0;
+    if(geo_sd_bios_load(v,aes,archive,archive_cap,&loaded))return -1;
+    for(unsigned i=0;i<4;i++){
+        geo_zip_member m;
+        size_t written=0;
+        if(geo_sd_bios_member_find(archive,loaded,i?common[i-1]:program,&m)||
+           m.uncompressed_size!=sizes[i]||
+           geo_sd_bios_member_decode(&m,slots[i].data,sizes[i],inflater,
+                                     context,&written)||written!=sizes[i])return -1;
+    }
+    return 0;
+}

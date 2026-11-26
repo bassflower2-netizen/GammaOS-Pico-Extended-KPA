@@ -25,6 +25,7 @@ static int fake_inflate(void *ctx,const unsigned char *src,uint32_t src_len,
 static unsigned char bios_payload[0x20000+1];
 
 
+static unsigned char lo[0x10000],sfix[0x20000],sm1[0x20000];
 static int accept_count;
 static int accept_fail;
 static int synthetic_accept(void *ctx,const void *bios,size_t length)
@@ -110,6 +111,25 @@ int main(int argc,char **argv)
     assert(accept_count==2);
     accept_fail=0;
 
+    geo_bios_slot slots[4]={{bios_payload,sizeof bios_payload},
+        {lo,sizeof lo},{sfix,sizeof sfix},{sm1,sizeof sm1}};
+    memset(lo,0xa5,sizeof lo);memset(sfix,0xa5,sizeof sfix);
+    memset(sm1,0xa5,sizeof sm1);
+    assert(!geo_sd_bios_set_load(&v,1,"neo-po.bin",dst,SIZE,slots,
+                                geo_zip_zlib_raw_inflate,NULL));
+    for(size_t i=0;i<sizeof lo;i++)assert(lo[i]==0);
+    for(size_t i=0;i<sizeof sfix;i++)assert(sfix[i]==0);
+    for(size_t i=0;i<sizeof sm1;i++)assert(sm1[i]==0x76);
+    assert(!geo_sd_bios_set_load(&v,0,"sp-u2.sp1",dst,SIZE,slots,
+                                geo_zip_zlib_raw_inflate,NULL));
+    assert(geo_sd_bios_set_load(&v,0,"missing.bin",dst,SIZE,slots,
+                                geo_zip_zlib_raw_inflate,NULL)<0);
+    slots[3].data=sfix;
+    assert(geo_sd_bios_set_load(&v,1,"neo-po.bin",dst,SIZE,slots,
+                                geo_zip_zlib_raw_inflate,NULL)<0);
+    slots[3].data=sm1;slots[3].capacity=1;
+    assert(geo_sd_bios_set_load(&v,1,"neo-po.bin",dst,SIZE,slots,
+                                geo_zip_zlib_raw_inflate,NULL)<0);
     /* Restore AES archive so the original ZIP mutation tests still apply. */
     assert(!geo_sd_bios_load(&v,1,dst,SIZE,&loaded));
     geo_zip_member m={0};

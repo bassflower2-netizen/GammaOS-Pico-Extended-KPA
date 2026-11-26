@@ -84,3 +84,6 @@ At bbb6a6b both workflows passed (45821950391 and 45821950278), including FAT16/
 
 ## Correct synthetic BIOS handoff regression
 At 8b7a8e6 integration 45824158875 succeeded; Neo Geo 45824158919 failed only in the host FAT fixture at synthetic_accept: first byte expected zero. fixture.py explicitly swaps each 16-bit word of the big-endian reset SSP 0x0010ff00, making the first byte 0x10. Replace the incorrect assertion with a full independent byte check of the reset vectors, loop instruction and zero-filled remainder. Preserve all callback count, size, CRC and failure tests. Native engine and ARM Linux jobs passed previously; new CI pending. No firmware changes or hardware tests.
+
+## Stage complete baseline BIOS set
+At 53c777c both workflows passed (45835124886, 45835123893). Stage program, LO, SFIX and SM1 from one FAT archive read, checking exact sizes, CRC and disjoint destination spans. FAT fixture tests cover AES/MVS, auxiliary ROM contents, missing program, overlapping slots and short capacity. All outputs invalid on failure. No engine start or firmware menu enabled; native engine binding and RAM allocation remain open. New CI pending.
