@@ -51,3 +51,6 @@ At 9a49d11 both workflows passed (45759250346 and 45759250320), including native
 
 ## BIOS archive read bridge
 At f0d73f3 both workflows passed (45766030096 and 45766030122, integration retry). Add bounded read-only BIOS archive loading from fixed /bios/aes.zip and /bios/neogeo.zip paths, with an 8 MiB provisional archive cap, ZIP signature screening and explicit failure length. FAT16/32 tests reuse original synthetic BIOS fixtures. This is not ZIP integrity or BIOS validation, nor engine integration; native archive consumption, saves and performance remain open. New CI pending.
+
+## BIOS ZIP directory screening
+At 23faa58 both workflows passed (45786924428, 45786924420); native newlib QEMU and FAT fixtures succeeded. Add conservative single-disk ZIP end-of-central-directory structure screening to the SD BIOS loader. The FAT16/32 fixture tests now also reject truncated archives and corrupted directory metadata, without including commercial BIOS data. This does NOT validate CRCs, members, BIOS content, or implement native archive extraction. Native engine filesystem integration, save persistence and RAM sizing remain open. CI for this stage pending.

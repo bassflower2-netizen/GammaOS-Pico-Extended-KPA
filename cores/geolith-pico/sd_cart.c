@@ -23,6 +23,36 @@ int geo_sd_cart_load(fat_vol *v,const char *path,void *dst,size_t cap)
     return geo_cart_load(read_at,&f,f.size,dst,cap);
 }
 
+
+static unsigned zip16(const unsigned char *p)
+{ return (unsigned)p[0]|((unsigned)p[1]<<8); }
+static uint32_t zip32(const unsigned char *p)
+{ return (uint32_t)p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24); }
+/* Structural screen of classic single-disk ZIP only. Not BIOS authenticity,
+ * member bounds, decompression or CRC verification. */
+int geo_sd_bios_zip_directory_valid(const void *bytes,size_t len)
+{
+    if(!bytes||len<22||len>8u*1024u*1024u)return -1;
+    const unsigned char *b=bytes;
+    if(memcmp(b,"PK\003\004",4))return -1;
+    size_t first=len>65557u?len-65557u:0;
+    for(size_t i=len-22;;--i){
+        if(!memcmp(b+i,"PK\005\006",4)&&zip16(b+i+20)==len-i-22){
+            unsigned entries=zip16(b+i+10);
+            uint32_t offset=zip32(b+i+16),size=zip32(b+i+12);
+            if(zip16(b+i+4)||zip16(b+i+6)||!entries||
+               entries==65535u||zip16(b+i+8)!=entries||
+               offset==UINT32_MAX||size==UINT32_MAX||size<46u||
+               (size_t)offset>i||(size_t)size>i-(size_t)offset||
+               (size_t)offset+(size_t)size!=i)return -1;
+            if(memcmp(b+offset,"PK\001\002",4))return -1;
+            return 0;
+        }
+        if(i==first)break;
+    }
+    return -1;
+}
+
 /* Fixed BIOS names only; caller owns buffer and validates ZIP contents. */
 int geo_sd_bios_load(fat_vol *v,int aes,void *dst,size_t cap,size_t *loaded)
 {
@@ -40,6 +70,7 @@ int geo_sd_bios_load(fat_vol *v,int aes,void *dst,size_t cap,size_t *loaded)
         if(fat_read(&f,off,(unsigned char *)dst+off,n)!=n)return -1;
         off+=n;
     }
+    if(geo_sd_bios_zip_directory_valid(dst,f.size))return -1;
     *loaded=f.size;
     return 0;
 }

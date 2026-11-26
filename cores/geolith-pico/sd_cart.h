@@ -6,4 +6,6 @@
 int geo_sd_cart_load(fat_vol *,const char *,void *,size_t);
 /* aes=1 selects aes.zip, aes=0 selects neogeo.zip. On failure loaded=0. */
 int geo_sd_bios_load(fat_vol *,int,void *,size_t,size_t *);
+/* ZIP central-directory structure only; no decompression/CRC verification. */
+int geo_sd_bios_zip_directory_valid(const void *,size_t);
 #endif
