@@ -52,9 +52,13 @@ int main(int argc,char **argv)
     assert(geo_sd_bios_zip_directory_valid(dst,loaded)<0);
     dst[second]=saved;
     /* Make the compressed payload overlap the central directory. */
-    saved=dst[cd+20];dst[cd+20]=0xff;
+    unsigned char original_size[4];
+    for(unsigned i=0;i<4;i++){
+        original_size[i]=dst[cd+20+i];
+        dst[cd+20+i]=0xff;
+    }
     assert(geo_sd_bios_zip_directory_valid(dst,loaded)<0);
-    dst[cd+20]=saved;
+    for(unsigned i=0;i<4;i++)dst[cd+20+i]=original_size[i];
     saved=dst[cd+8];dst[cd+8]|=1;
     assert(geo_sd_bios_zip_directory_valid(dst,loaded)<0);
     dst[cd+8]=saved;
