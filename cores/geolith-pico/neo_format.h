@@ -6,5 +6,6 @@
  * Not a guarantee that ROM internals or protection metadata are valid. */
 #define PICO_NEO_HEADER 4096u
 #define PICO_NEO_MAX (128u*1024u*1024u)
+int pico_neo_validate_header(const void *data,size_t available,size_t size);
 int pico_neo_validate(const void *data,size_t size);
 #endif

@@ -42,3 +42,6 @@ At ca2ec2e both workflows passed (45733998413 and 45733998421). Add a separate r
 
 ## Stage 13: execute real newlib allocator
 At 8bfe786 both workflows passed (45739932435 and 45739932430); native log explicitly confirmed link-only probe. Add a CI-only ARM Linux EABI exit harness to execute the actual bare-metal newlib allocator object under qemu-arm, without Linux libc or firmware changes. Extend probe with exhaustion, live-data preservation and reuse checks. Final executable linking must reject unresolved imports; QEMU exit status is mandatory. This is not a device test or a full engine link. Filesystem and device RAM layout remain open. New CI pending.
+
+## Stage 14: bounded positional cartridge reader
+At 59de688 both workflows passed (45752696882 and 45752696999); native log confirms real newlib allocator execution passed. Add a caller-owned positional reader for .neo cartridges, validate header and total length before payload reads, bound chunks to 32 KiB, reject short reads and insufficient destination capacity. Failed loads leave destination invalid; caller must not launch it. Host/ARM fixture tests and bare-metal compilation added, CI pending. Actual SD-FAT callback, BIOS ZIP I/O, saves and firmware integration remain open. No fixed RAM allocation or hardware test.
