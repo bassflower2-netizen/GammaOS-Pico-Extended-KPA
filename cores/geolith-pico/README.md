@@ -39,3 +39,6 @@ At 298874d both workflows passed (45725954010 and 45725954206), including host a
 
 ## Stage 12: real newlib allocator link probe
 At ca2ec2e both workflows passed (45733998413 and 45733998421). Add a separate relocatable link probe using actual newlib calloc/realloc/free and the private _sbrk hook, asserting allocator imports resolve and required symbols exist. The probe includes zero-fill and preservation checks for future execution but is not executed in this stage. No device RAM reservation, no firmware packaging; remaining platform syscalls and filesystem integration are open. New CI pending.
+
+## Stage 13: execute real newlib allocator
+At 8bfe786 both workflows passed (45739932435 and 45739932430); native log explicitly confirmed link-only probe. Add a CI-only ARM Linux EABI exit harness to execute the actual bare-metal newlib allocator object under qemu-arm, without Linux libc or firmware changes. Extend probe with exhaustion, live-data preservation and reuse checks. Final executable linking must reject unresolved imports; QEMU exit status is mandatory. This is not a device test or a full engine link. Filesystem and device RAM layout remain open. New CI pending.

@@ -104,7 +104,7 @@ jobs:
       - name: Install bare-metal toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi binutils-arm-none-eabi
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi binutils-arm-none-eabi qemu-user
       - name: Build native static zlib
         run: |
           set -eu
@@ -130,6 +130,12 @@ jobs:
           cp zlib.h zconf.h "$RUNNER_TEMP/zlib-native/include/"
       - name: Compile native engine and inventory unresolved imports
         run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native" "$RUNNER_TEMP/zlib-native"
+      - name: Execute real newlib allocator on ARM Linux syscall harness
+        run: |
+          set -eu
+          arm-none-eabi-gcc -march=armv7-a -mfloat-abi=soft -marm -nostdlib -static -Wl,-e,_start -Wl,-Ttext=0x10000 -o "$RUNNER_TEMP/geo-newlib-run" cores/geolith-pico/newlib_test_start.S "$RUNNER_TEMP/geolith-native/newlib-allocator-linked.o"
+          timeout 30s qemu-arm "$RUNNER_TEMP/geo-newlib-run"
+          echo 'Real newlib allocator execution passed'
       - uses: actions/upload-artifact@v4
         with:
           name: Geolith-native-engine-inventory-NOT-FOR-FLASHING
