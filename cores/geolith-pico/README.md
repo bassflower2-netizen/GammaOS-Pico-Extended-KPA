@@ -48,3 +48,6 @@ At 59de688 both workflows passed (45752696882 and 45752696999); native log confi
 
 ## SD cartridge bridge
 At 9a49d11 both workflows passed (45759250346 and 45759250320), including native allocator execution. Add a read-only bridge from mounted FAT volume to bounded cartridge loader, with synthetic FAT16/32 image tests, invalid path/header and capacity checks. No scanner or firmware integration yet; FAT chain performance and BIOS/save access remain open. New CI pending.
+
+## BIOS archive read bridge
+At f0d73f3 both workflows passed (45766030096 and 45766030122, integration retry). Add bounded read-only BIOS archive loading from fixed /bios/aes.zip and /bios/neogeo.zip paths, with an 8 MiB provisional archive cap, ZIP signature screening and explicit failure length. FAT16/32 tests reuse original synthetic BIOS fixtures. This is not ZIP integrity or BIOS validation, nor engine integration; native archive consumption, saves and performance remain open. New CI pending.

@@ -23,6 +23,13 @@ int main(int argc,char **argv)
     assert(geo_sd_cart_load(&v,"/roms/neo/../neo/Test Cart.NEO",dst,SIZE)<0);
     assert(geo_sd_cart_load(&v,"/roms/neo/missing.neo",dst,SIZE)<0);
     assert(geo_sd_cart_load(&v,"/roms/neo/bad.neo",dst,SIZE)<0);
-    fail=1;assert(geo_sd_cart_load(&v,"/roms/neo/Test Cart.NEO",dst,SIZE)<0);
+    size_t loaded=99;
+    assert(!geo_sd_bios_load(&v,1,dst,SIZE,&loaded)&&loaded>22);
+    assert(dst[0]=='P'&&dst[1]=='K');
+    assert(!geo_sd_bios_load(&v,0,dst,SIZE,&loaded)&&loaded>22);
+    assert(geo_sd_bios_load(&v,1,dst,21,&loaded)<0&&loaded==0);
+    assert(geo_sd_bios_load(&v,2,dst,SIZE,&loaded)<0&&loaded==0);
+    fail=1;assert(geo_sd_bios_load(&v,0,dst,SIZE,&loaded)<0&&loaded==0);
+    assert(geo_sd_cart_load(&v,"/roms/neo/Test Cart.NEO",dst,SIZE)<0);
     fclose(f);puts("Neo Geo FAT cartridge fixture passed");return 0;
 }
