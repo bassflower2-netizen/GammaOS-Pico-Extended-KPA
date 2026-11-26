@@ -145,6 +145,47 @@ jobs:
           for src in neo_format cart_io sd_cart; do
             arm-none-eabi-gcc -march=armv7-a -mfloat-abi=soft -marm -std=c11 -Wall -Wextra -Werror -ffreestanding -c "cores/geolith-pico/$src.c" -o "$RUNNER_TEMP/$src.o"
           done
+          arm-none-eabi-gcc -march=armv7-a -mfloat-abi=soft -marm -std=c11 -Wall -Wextra -Werror -ffreestanding \
+            -I"$RUNNER_TEMP/zlib-native/include" -c cores/geolith-pico/geo_zlib.c -o "$RUNNER_TEMP/geo_zlib.o"
+          # Link the actual native archive adapter with the same zlib library
+          # used by the engine. No firmware packaging or fake syscall stubs.
+          arm-none-eabi-ld -r -o "$RUNNER_TEMP/geo-zip-zlib-linked.o" \
+            "$RUNNER_TEMP/geo_zlib.o" "$RUNNER_TEMP/zlib-native/lib/libz.a"
+          arm-none-eabi-nm --defined-only "$RUNNER_TEMP/geo-zip-zlib-linked.o" | \
+            grep -Eq '[[:space:]]T[[:space:]]geo_zip_zlib_raw_inflate
+      - name: Compile native engine and inventory unresolved imports
+        run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native" "$RUNNER_TEMP/zlib-native"
+      - name: Execute real newlib allocator on ARM Linux syscall harness
+        run: |
+          set -eu
+          arm-none-eabi-gcc -march=armv7-a -mfloat-abi=soft -marm -nostdlib -static -Wl,-e,_start -Wl,-Ttext=0x10000 -o "$RUNNER_TEMP/geo-newlib-run" cores/geolith-pico/newlib_test_start.S "$RUNNER_TEMP/geolith-native/newlib-allocator-linked.o"
+          timeout 30s qemu-arm "$RUNNER_TEMP/geo-newlib-run"
+          echo 'Real newlib allocator execution passed'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Geolith-native-engine-inventory-NOT-FOR-FLASHING
+          path: ${{ runner.temp }}/geolith-native/undefined.txt
+          if-no-files-found: error
+
+          if arm-none-eabi-nm -u "$RUNNER_TEMP/geo-zip-zlib-linked.o" | \
+             grep -Eq '[[:space:]]U[[:space:]](inflate|inflateInit2_|inflateEnd)
+      - name: Compile native engine and inventory unresolved imports
+        run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native" "$RUNNER_TEMP/zlib-native"
+      - name: Execute real newlib allocator on ARM Linux syscall harness
+        run: |
+          set -eu
+          arm-none-eabi-gcc -march=armv7-a -mfloat-abi=soft -marm -nostdlib -static -Wl,-e,_start -Wl,-Ttext=0x10000 -o "$RUNNER_TEMP/geo-newlib-run" cores/geolith-pico/newlib_test_start.S "$RUNNER_TEMP/geolith-native/newlib-allocator-linked.o"
+          timeout 30s qemu-arm "$RUNNER_TEMP/geo-newlib-run"
+          echo 'Real newlib allocator execution passed'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Geolith-native-engine-inventory-NOT-FOR-FLASHING
+          path: ${{ runner.temp }}/geolith-native/undefined.txt
+          if-no-files-found: error
+; then
+            echo "Native zlib adapter still has unresolved inflate functions" >&2
+            exit 1
+          fi
       - name: Compile native engine and inventory unresolved imports
         run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native" "$RUNNER_TEMP/zlib-native"
       - name: Execute real newlib allocator on ARM Linux syscall harness
