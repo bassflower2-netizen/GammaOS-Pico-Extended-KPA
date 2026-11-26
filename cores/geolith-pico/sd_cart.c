@@ -28,8 +28,9 @@ static unsigned zip16(const unsigned char *p)
 { return (unsigned)p[0]|((unsigned)p[1]<<8); }
 static uint32_t zip32(const unsigned char *p)
 { return (uint32_t)p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24); }
-/* Structural screen of classic single-disk ZIP only. Not BIOS authenticity,
- * member bounds, decompression or CRC verification. */
+/* Validate each classic ZIP central entry and its local-file bounds.
+ * Reject encryption and Zip64. This does not verify decompressed bytes,
+ * CRC values or the authenticity of the BIOS itself. */
 int geo_sd_bios_zip_directory_valid(const void *bytes,size_t len)
 {
     if(!bytes||len<22||len>8u*1024u*1024u)return -1;
@@ -39,14 +40,31 @@ int geo_sd_bios_zip_directory_valid(const void *bytes,size_t len)
     for(size_t i=len-22;;--i){
         if(!memcmp(b+i,"PK\005\006",4)&&zip16(b+i+20)==len-i-22){
             unsigned entries=zip16(b+i+10);
-            uint32_t offset=zip32(b+i+16),size=zip32(b+i+12);
+            uint32_t off=zip32(b+i+16),size=zip32(b+i+12);
             if(zip16(b+i+4)||zip16(b+i+6)||!entries||
                entries==65535u||zip16(b+i+8)!=entries||
-               offset==UINT32_MAX||size==UINT32_MAX||size<46u||
-               (size_t)offset>i||(size_t)size>i-(size_t)offset||
-               (size_t)offset+(size_t)size!=i)return -1;
-            if(memcmp(b+offset,"PK\001\002",4))return -1;
-            return 0;
+               off==UINT32_MAX||size==UINT32_MAX||size<46u||
+               (size_t)off>i||(size_t)size>i-(size_t)off||
+               (size_t)off+(size_t)size!=i)return -1;
+            size_t pos=off;
+            for(unsigned n=0;n<entries;n++){
+                if(pos>i||i-pos<46||memcmp(b+pos,"PK\001\002",4))return -1;
+                unsigned flags=zip16(b+pos+8),method=zip16(b+pos+10);
+                unsigned name=zip16(b+pos+28),extra=zip16(b+pos+30),comment=zip16(b+pos+32);
+                uint32_t compressed=zip32(b+pos+20),local=zip32(b+pos+42);
+                size_t record=46u+(size_t)name+extra+comment;
+                if(!name||record>i-pos||flags&1u||(method!=0&&method!=8)||
+                   zip16(b+pos+34)||compressed==UINT32_MAX||
+                   zip32(b+pos+24)==UINT32_MAX||local==UINT32_MAX||
+                   (size_t)local>off||off-(size_t)local<30||
+                   memcmp(b+local,"PK\003\004",4))return -1;
+                unsigned local_name=zip16(b+local+26),local_extra=zip16(b+local+28);
+                size_t data=(size_t)local+30u+local_name+local_extra;
+                if(local_name!=name||data>off||compressed>off-data||
+                   memcmp(b+local+30,b+pos+46,name))return -1;
+                pos+=record;
+            }
+            return pos==i?0:-1;
         }
         if(i==first)break;
     }

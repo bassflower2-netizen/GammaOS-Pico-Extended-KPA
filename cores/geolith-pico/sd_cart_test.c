@@ -39,6 +39,30 @@ int main(int argc,char **argv)
     assert(geo_sd_bios_zip_directory_valid(dst,loaded)<0);
     dst[loaded-16]=saved;
     assert(geo_sd_bios_zip_directory_valid(NULL,loaded)<0);
+    /* Corrupt a later central entry: the first entry alone is insufficient. */
+    size_t cd=0, second=0;
+    for(size_t k=0;k+4<loaded;k++){
+        if(dst[k]=='P'&&dst[k+1]=='K'&&dst[k+2]==1&&dst[k+3]==2){
+            if(cd) {second=k;break;}
+            cd=k;
+        }
+    }
+    assert(cd&&second);
+    saved=dst[second];dst[second]=0;
+    assert(geo_sd_bios_zip_directory_valid(dst,loaded)<0);
+    dst[second]=saved;
+    /* Make the compressed payload overlap the central directory. */
+    saved=dst[cd+20];dst[cd+20]=0xff;
+    assert(geo_sd_bios_zip_directory_valid(dst,loaded)<0);
+    dst[cd+20]=saved;
+    saved=dst[cd+8];dst[cd+8]|=1;
+    assert(geo_sd_bios_zip_directory_valid(dst,loaded)<0);
+    dst[cd+8]=saved;
+    /* Header count must match the entries walked to directory end. */
+    saved=dst[loaded-12];dst[loaded-12]=1;
+    assert(geo_sd_bios_zip_directory_valid(dst,loaded)<0);
+    dst[loaded-12]=saved;
+
     assert(!geo_sd_bios_load(&v,0,dst,SIZE,&loaded)&&loaded>22);
     assert(geo_sd_bios_load(&v,1,dst,21,&loaded)<0&&loaded==0);
     assert(geo_sd_bios_load(&v,2,dst,SIZE,&loaded)<0&&loaded==0);
