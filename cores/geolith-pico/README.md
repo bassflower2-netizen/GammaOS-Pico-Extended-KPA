@@ -36,3 +36,6 @@ At 917c199 both workflows passed (45719185001 and 45719184672); native compressi
 
 ## Stage 11: private newlib break hook
 At 298874d both workflows passed (45725954010 and 45725954206), including host and ARM Linux arena tests and native compilation. Bind the caller-owned arena once before allocations; reject rebinding even after the break returns to zero, preventing stale allocator state from being reused. Compile and link the private _sbrk hook into the relocatable native probe and verify its symbol. Host and ARM Linux tests exercise the same break logic without overriding host libc. No fixed RAM reservation or actual newlib malloc execution yet; final libc linking, filesystem, session lifecycle and firmware packaging remain open. New CI pending.
+
+## Stage 12: real newlib allocator link probe
+At ca2ec2e both workflows passed (45733998413 and 45733998421). Add a separate relocatable link probe using actual newlib calloc/realloc/free and the private _sbrk hook, asserting allocator imports resolve and required symbols exist. The probe includes zero-fill and preservation checks for future execution but is not executed in this stage. No device RAM reservation, no firmware packaging; remaining platform syscalls and filesystem integration are open. New CI pending.

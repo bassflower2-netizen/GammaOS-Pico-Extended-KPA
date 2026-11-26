@@ -68,3 +68,17 @@ assert any(line.split()[-1:] == ["_sbrk"] for line in defined.splitlines()), "Mi
 print("ZIP and audio resampler dependencies resolved; directory ABI remains unresolved")
 subprocess.run(["arm-none-eabi-readelf", "-h", str(combined)], check=True)
 print(f"Compiled {len(objects)} native engine objects. Unresolved imports:\n{imports}")
+
+# Link a separate allocator probe with real newlib, preserving the engine inventory.
+# Relocatable linking deliberately leaves unrelated platform syscalls visible.
+probe = out / "newlib-allocator-probe.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-std=c11", "-Wall", "-Wextra", "-Werror", "-ffreestanding", "-c", str(pathlib.Path(__file__).with_name("newlib_allocator_probe.c").resolve()), "-o", str(probe)], check=True)
+linked = out / "newlib-allocator-linked.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-nostdlib", "-Wl,-r", "-o", str(linked), str(probe), str(out / "arena.o"), str(out / "native_heap.o"), "-Wl,--start-group", "-lc", "-lgcc", "-Wl,--end-group"], check=True)
+probe_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(linked)], text=True)
+probe_missing = {line.split()[-1] for line in probe_imports.splitlines() if line.strip()}
+assert not {"malloc", "calloc", "realloc", "free", "_malloc_r", "_calloc_r", "_realloc_r", "_free_r", "_sbrk", "_sbrk_r"} & probe_missing, probe_missing
+probe_defined = subprocess.check_output(["arm-none-eabi-nm", "--defined-only", str(linked)], text=True)
+assert {"calloc", "realloc", "free", "_sbrk", "_sbrk_r", "geo_newlib_probe"} <= {line.split()[-1] for line in probe_defined.splitlines() if line.strip()}, probe_defined
+(out / "newlib-allocator-imports.txt").write_text(probe_imports)
+print("Real newlib allocator link probe passed (not executed):", probe_imports)
