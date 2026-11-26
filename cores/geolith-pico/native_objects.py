@@ -10,6 +10,9 @@ plan = subprocess.check_output(["make", "-Bn", "platform=unix", "CC=arm-none-eab
 objects = []
 # Compile the caller-owned arena for the native target without reserving device RAM.
 subprocess.run(["arm-none-eabi-gcc", "-march=armv7-a", "-mfloat-abi=soft", "-marm", "-std=c11", "-Wall", "-Wextra", "-Werror", "-ffreestanding", "-c", str(pathlib.Path(__file__).with_name("arena.c").resolve()), "-o", str(out / "arena.o")], check=True)
+# Link the private newlib break hook into the relocatable probe, not the firmware.
+subprocess.run(["arm-none-eabi-gcc", "-march=armv7-a", "-mfloat-abi=soft", "-marm", "-std=c11", "-Wall", "-Wextra", "-Werror", "-ffreestanding", "-DGEO_NEWLIB", "-c", str(pathlib.Path(__file__).with_name("native_heap.c").resolve()), "-o", str(out / "native_heap.o")], check=True)
+objects.extend([out / "arena.o", out / "native_heap.o"])
 zlib = pathlib.Path(sys.argv[3]).resolve()
 assert (zlib / "lib/libz.a").is_file()
 # Reuse the type-checked newlib format shim already used by PCE/Handy.
@@ -59,6 +62,9 @@ imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(combined)], tex
 missing = {line.split()[-1] for line in imports.splitlines() if line.strip()}
 assert not any(s.startswith(("mz_zip_", "geo_resampler_", "chd_", "inflate", "deflate", "gz", "ZSTD_", "Lzma")) or s in {"compress", "compress2", "uncompress", "uncompress2", "crc32", "adler32"} for s in missing), missing
 assert {"opendir", "readdir", "closedir", "utime"} <= missing, "Directory and timestamp ABI must remain explicit until a platform adapter is linked"
+assert not {"geo_arena_init", "geo_arena_sbrk", "geo_heap_break", "_sbrk"} & missing, missing
+defined = subprocess.check_output(["arm-none-eabi-nm", "--defined-only", str(combined)], text=True)
+assert any(line.split()[-1:] == ["_sbrk"] for line in defined.splitlines()), "Missing newlib heap hook"
 print("ZIP and audio resampler dependencies resolved; directory ABI remains unresolved")
 subprocess.run(["arm-none-eabi-readelf", "-h", str(combined)], check=True)
 print(f"Compiled {len(objects)} native engine objects. Unresolved imports:\n{imports}")

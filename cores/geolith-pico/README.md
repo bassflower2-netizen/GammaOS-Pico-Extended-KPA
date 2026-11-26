@@ -33,3 +33,6 @@ At 3c3357c integration run 45711228363 passed, but Geolith run 45711225813 faile
 
 ## Stage 10: bounded caller-owned heap primitive
 At 917c199 both workflows passed (45719185001 and 45719184672); native compression checks passed. Native imports still include malloc/calloc/realloc/free, stdio, filesystem and time. Add a caller-owned bounded sbrk primitive with alignment and overflow checks, tested on host and ARM Linux and compiled for bare metal. No fixed device RAM reservation, no global newlib hook or firmware packaging yet. Existing PCE/Handy private heaps remain unchanged. Final allocator wiring, filesystem and native link remain open; new CI pending.
+
+## Stage 11: private newlib break hook
+At 298874d both workflows passed (45725954010 and 45725954206), including host and ARM Linux arena tests and native compilation. Bind the caller-owned arena once before allocations; reject rebinding even after the break returns to zero, preventing stale allocator state from being reused. Compile and link the private _sbrk hook into the relocatable native probe and verify its symbol. Host and ARM Linux tests exercise the same break logic without overriding host libc. No fixed RAM reservation or actual newlib malloc execution yet; final libc linking, filesystem, session lifecycle and firmware packaging remain open. New CI pending.
