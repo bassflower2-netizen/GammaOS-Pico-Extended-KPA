@@ -27,6 +27,16 @@ int main(int argc,char **argv)
     assert(!geo_sd_bios_load(&v,1,dst,SIZE,&loaded)&&loaded>22);
     assert(dst[0]=='P'&&dst[1]=='K');
     assert(!geo_sd_bios_zip_directory_valid(dst,loaded));
+    geo_zip_member m={0};
+    assert(!geo_sd_bios_member_find(dst,loaded,"neo-po.bin",&m));
+    assert(m.data>=dst&&m.data<dst+loaded&&m.compressed_size>0);
+    assert(m.method==8||m.method==0);
+    assert((size_t)(m.data-dst)+m.compressed_size<=loaded);
+    assert(geo_sd_bios_member_find(dst,loaded,"missing.bin",&m)<0);
+    assert(m.data==NULL&&m.compressed_size==0);
+    assert(geo_sd_bios_member_find(dst,loaded,"neo-po.bin",NULL)<0);
+    assert(geo_sd_bios_member_find(dst,loaded,NULL,&m)<0);
+    assert(geo_sd_bios_member_find(dst,loaded,"neo-po.bin",&m)==0);
     assert(geo_sd_bios_zip_directory_valid(dst,loaded-1)<0);
     unsigned char saved=dst[loaded-22];
     dst[loaded-22]=0;

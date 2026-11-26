@@ -71,6 +71,49 @@ int geo_sd_bios_zip_directory_valid(const void *bytes,size_t len)
     return -1;
 }
 
+
+/* Caller-owned, in-memory ZIP lookup for later native BIOS decoding.
+ * Data is compressed when method=8; no decompression/CRC check is implied. */
+int geo_sd_bios_member_find(const void *zip,size_t len,const char *name,
+                            geo_zip_member *member)
+{
+    if(!member)return -1;
+    memset(member,0,sizeof(*member));
+    if(!name||!name[0]||!zip||geo_sd_bios_zip_directory_valid(zip,len))return -1;
+    size_t requested=strlen(name);
+    if(requested>255)return -1;
+    const unsigned char *b=zip;
+    size_t start=len>65557u?len-65557u:0;
+    for(size_t i=len-22;;--i){
+        if(!memcmp(b+i,"PK\005\006",4)&&zip16(b+i+20)==len-i-22){
+            size_t pos=zip32(b+i+16);
+            unsigned entries=zip16(b+i+10);
+            int found=0;
+            for(unsigned n=0;n<entries;n++){
+                unsigned name_len=zip16(b+pos+28);
+                unsigned extra=zip16(b+pos+30),comment=zip16(b+pos+32);
+                if(requested==name_len&&!memcmp(b+pos+46,name,requested)){
+                    if(found)return -1; /* ambiguous duplicate member */
+                    uint32_t local=zip32(b+pos+42);
+                    size_t data=(size_t)local+30u+zip16(b+local+26)+zip16(b+local+28);
+                    member->data=b+data;
+                    member->compressed_size=zip32(b+pos+20);
+                    member->uncompressed_size=zip32(b+pos+24);
+                    member->crc32=zip32(b+pos+16);
+                    member->method=(unsigned short)zip16(b+pos+10);
+                    found=1;
+                }
+                pos+=46u+name_len+extra+comment;
+            }
+            if(found)return 0;
+            memset(member,0,sizeof(*member));
+            return -1;
+        }
+        if(i==start)break;
+    }
+    return -1;
+}
+
 /* Fixed BIOS names only; caller owns buffer and validates ZIP contents. */
 int geo_sd_bios_load(fat_vol *v,int aes,void *dst,size_t cap,size_t *loaded)
 {
