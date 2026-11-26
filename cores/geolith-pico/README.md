@@ -45,3 +45,6 @@ At 8bfe786 both workflows passed (45739932435 and 45739932430); native log expli
 
 ## Stage 14: bounded positional cartridge reader
 At 59de688 both workflows passed (45752696882 and 45752696999); native log confirms real newlib allocator execution passed. Add a caller-owned positional reader for .neo cartridges, validate header and total length before payload reads, bound chunks to 32 KiB, reject short reads and insufficient destination capacity. Failed loads leave destination invalid; caller must not launch it. Host/ARM fixture tests and bare-metal compilation added, CI pending. Actual SD-FAT callback, BIOS ZIP I/O, saves and firmware integration remain open. No fixed RAM allocation or hardware test.
+
+## SD cartridge bridge
+At 9a49d11 both workflows passed (45759250346 and 45759250320), including native allocator execution. Add a read-only bridge from mounted FAT volume to bounded cartridge loader, with synthetic FAT16/32 image tests, invalid path/header and capacity checks. No scanner or firmware integration yet; FAT chain performance and BIOS/save access remain open. New CI pending.
