@@ -17,4 +17,7 @@ typedef struct {
     unsigned short method;
 } geo_zip_member;
 int geo_sd_bios_member_find(const void *,size_t,const char *,geo_zip_member *);
+/* Only classic STORED members (method 0); CRC32 must match before copy.
+ * Caller must only use spans returned from a validated archive. */
+int geo_sd_bios_member_copy_stored(const geo_zip_member *,void *,size_t,size_t *);
 #endif

@@ -37,6 +37,27 @@ int main(int argc,char **argv)
     assert(geo_sd_bios_member_find(dst,loaded,"neo-po.bin",NULL)<0);
     assert(geo_sd_bios_member_find(dst,loaded,NULL,&m)<0);
     assert(geo_sd_bios_member_find(dst,loaded,"neo-po.bin",&m)==0);
+    /* Deflate bytes are not safe to pass to the engine as uncompressed BIOS. */
+    if(m.method==8){
+        size_t n=99;
+        assert(geo_sd_bios_member_copy_stored(&m,dst,SIZE,&n)<0&&n==0);
+    }
+    /* Independent original STORED-member fixture with known CRC32("hello"). */
+    static const unsigned char hello[]={'h','e','l','l','o'};
+    unsigned char decoded[6]={0};
+    size_t nbytes=99;
+    geo_zip_member stored={hello,5,5,0x3610a686u,0};
+    assert(!geo_sd_bios_member_copy_stored(&stored,decoded,5,&nbytes));
+    assert(nbytes==5&&decoded[0]=='h'&&decoded[4]=='o'&&decoded[5]==0);
+    stored.crc32^=1u;
+    assert(geo_sd_bios_member_copy_stored(&stored,decoded,5,&nbytes)<0&&nbytes==0);
+    stored.crc32^=1u;
+    assert(geo_sd_bios_member_copy_stored(&stored,decoded,4,&nbytes)<0&&nbytes==0);
+    stored.method=8;
+    assert(geo_sd_bios_member_copy_stored(&stored,decoded,5,&nbytes)<0&&nbytes==0);
+    stored.method=0;stored.uncompressed_size=6;
+    assert(geo_sd_bios_member_copy_stored(&stored,decoded,6,&nbytes)<0&&nbytes==0);
+    assert(geo_sd_bios_member_copy_stored(NULL,decoded,6,&nbytes)<0&&nbytes==0);
     assert(geo_sd_bios_zip_directory_valid(dst,loaded-1)<0);
     unsigned char saved=dst[loaded-22];
     dst[loaded-22]=0;

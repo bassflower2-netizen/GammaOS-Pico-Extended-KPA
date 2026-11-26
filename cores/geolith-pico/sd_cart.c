@@ -114,6 +114,31 @@ int geo_sd_bios_member_find(const void *zip,size_t len,const char *name,
     return -1;
 }
 
+
+/* First native BIOS decoding stage: bounded ZIP STORED (method 0) members.
+ * Deflate is intentionally not accepted until a raw-inflate adapter is linked.
+ * CRC32 is computed independently of zlib to keep this stage bare-metal safe. */
+int geo_sd_bios_member_copy_stored(const geo_zip_member *member,void *dst,
+                                   size_t capacity,size_t *written)
+{
+    if(!written)return -1;
+    *written=0;
+    if(!member||!member->data||!dst||member->method!=0||
+       !member->uncompressed_size||
+       member->compressed_size!=member->uncompressed_size||
+       (size_t)member->uncompressed_size>capacity)return -1;
+    uint32_t crc=UINT32_MAX;
+    for(uint32_t i=0;i<member->compressed_size;i++){
+        crc^=member->data[i];
+        for(unsigned bit=0;bit<8;bit++)
+            crc=(crc>>1)^(0xedb88320u&(0u-(crc&1u)));
+    }
+    if((crc^UINT32_MAX)!=member->crc32)return -1;
+    memcpy(dst,member->data,member->uncompressed_size);
+    *written=member->uncompressed_size;
+    return 0;
+}
+
 /* Fixed BIOS names only; caller owns buffer and validates ZIP contents. */
 int geo_sd_bios_load(fat_vol *v,int aes,void *dst,size_t cap,size_t *loaded)
 {
