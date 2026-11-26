@@ -51,6 +51,8 @@ typedef struct { void *data; size_t capacity; } geo_bios_slot;
 int geo_sd_bios_set_load(fat_vol *,int,const char *,void *,size_t,
                          geo_bios_slot [4],geo_zip_raw_inflater,void *);
 /* Callback receives all four verified slots together, in baseline order.
+ * Slot capacities in the callback are exact verified byte lengths, not backing
+ * buffer capacities. The descriptor array is valid only during the callback.
  * Buffers remain caller-owned; callback must copy or respect their lifetime.
  * Callback failure is propagated; caller is responsible for engine rollback. */
 typedef int (*geo_bios_set_accept)(void *,int,const geo_bios_slot [4]);

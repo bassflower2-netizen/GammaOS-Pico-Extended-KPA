@@ -90,3 +90,6 @@ At 53c777c both workflows passed (45835124886, 45835123893). Stage program, LO, 
 
 ## Complete BIOS set publication
 At 26a4d59 both workflows passed (45855122835 and 45855122915), including FAT16/32 fixtures, ARM runtime, native allocator and integration. Add a single callback publication of the four validated BIOS slots, rejecting missing data before callback and propagating callback refusal. Regression tests cover success, missing member and null/refusing callback. This remains an adapter boundary, not actual Geolith execution; native engine binding, memory sizing, saves and menus remain open. New CI pending; no hardware tests.
+
+## Exact BIOS publication lengths
+At 26c1354 both workflows passed (45895637682, 45895637648); job logs confirm host FAT fixtures, ARM runtime, native engine compilation and newlib execution. Publish exact verified ROM lengths rather than caller buffer capacities, preventing engine consumers from reading uninitialized tails. Regression checks cover oversized backing storage and unchanged caller descriptors. Native engine binding remains open; new CI pending, no hardware tests.

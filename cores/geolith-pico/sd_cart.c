@@ -282,5 +282,10 @@ int geo_sd_bios_set_handoff(fat_vol *v,int aes,const char *program,
     if(!accept)return -1;
     if(geo_sd_bios_set_load(v,aes,program,archive,archive_cap,slots,
                             inflater,inflate_context))return -1;
-    return accept(accept_context,aes,slots);
+    /* Publish exact validated lengths, not the potentially larger backing
+     * capacities. The engine must never consume uninitialized tail bytes. */
+    const geo_bios_slot verified[4]={{slots[0].data,0x20000},
+        {slots[1].data,0x10000},{slots[2].data,0x20000},
+        {slots[3].data,0x20000}};
+    return accept(accept_context,aes,verified);
 }

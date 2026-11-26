@@ -51,6 +51,8 @@ static int accept_set(void *ctx,int aes,const geo_bios_slot slots[4])
 {
     assert(aes==1);
     assert(slots[0].data==bios_payload);
+    assert(slots[0].capacity==0x20000&&slots[1].capacity==0x10000);
+    assert(slots[2].capacity==0x20000&&slots[3].capacity==0x20000);
     assert(((const unsigned char *)slots[1].data)[0]==0);
     assert(((const unsigned char *)slots[2].data)[0]==0);
     assert(((const unsigned char *)slots[3].data)[0]==0x76);
@@ -136,9 +138,12 @@ int main(int argc,char **argv)
     assert(geo_sd_bios_set_load(&v,0,"missing.bin",dst,SIZE,slots,
                                 geo_zip_zlib_raw_inflate,NULL)<0);
     set_calls=0;
+    bios_payload[0x20000]=0xa5;
     assert(!geo_sd_bios_set_handoff(&v,1,"neo-po.bin",dst,SIZE,slots,
         geo_zip_zlib_raw_inflate,NULL,accept_set,NULL));
     assert(set_calls==1);
+    assert(bios_payload[0x20000]==0xa5);
+    assert(slots[0].capacity==sizeof bios_payload);
     assert(geo_sd_bios_set_handoff(&v,1,"missing.bin",dst,SIZE,slots,
         geo_zip_zlib_raw_inflate,NULL,accept_set,NULL)<0);
     assert(set_calls==1);
