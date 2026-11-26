@@ -36,4 +36,12 @@ int geo_sd_bios_member_decode(const geo_zip_member *,void *,size_t,
 int geo_sd_bios_member_from_fat(fat_vol *,int,const char *,
                                 void *,size_t,void *,size_t,
                                 geo_zip_raw_inflater,void *,size_t *);
+/* Interface boundary only: accept() is invoked exactly once after a
+ * successful full read, raw inflate, CRC verification and exact-size check.
+ * A returned failure is propagated. No firmware engine calls are made here. */
+typedef int (*geo_bios_accept)(void *,const void *,size_t);
+int geo_sd_bios_handoff(fat_vol *,int,const char *,
+                        void *,size_t,void *,size_t,size_t,
+                        geo_zip_raw_inflater,void *,
+                        geo_bios_accept,void *);
 #endif

@@ -24,6 +24,18 @@ static int fake_inflate(void *ctx,const unsigned char *src,uint32_t src_len,
 }
 static unsigned char bios_payload[0x20000+1];
 
+
+static int accept_count;
+static int accept_fail;
+static int synthetic_accept(void *ctx,const void *bios,size_t length)
+{
+    (void)ctx;
+    assert(bios==bios_payload&&length==0x20000);
+    assert(((const unsigned char *)bios)[0]==0);
+    ++accept_count;
+    return accept_fail?-1:0;
+}
+
 int main(int argc,char **argv)
 {
     assert(argc==2);
@@ -60,6 +72,35 @@ int main(int argc,char **argv)
     assert(!geo_sd_bios_member_from_fat(&v,0,"sp-u2.sp1",dst,SIZE,
             bios_payload,sizeof bios_payload,geo_zip_zlib_raw_inflate,NULL,&chained));
     assert(chained==0x20000);
+    /* Real FAT handoff boundary: callback only after valid CRC and size. */
+    accept_count=0;accept_fail=0;
+    assert(!geo_sd_bios_handoff(&v,1,"neo-po.bin",dst,SIZE,
+        bios_payload,sizeof bios_payload,0x20000,
+        geo_zip_zlib_raw_inflate,NULL,synthetic_accept,NULL));
+    assert(accept_count==1);
+    assert(geo_sd_bios_handoff(&v,1,"missing.bin",dst,SIZE,
+        bios_payload,sizeof bios_payload,0x20000,
+        geo_zip_zlib_raw_inflate,NULL,synthetic_accept,NULL)<0);
+    assert(accept_count==1);
+    assert(geo_sd_bios_handoff(&v,1,"neo-po.bin",dst,SIZE,
+        bios_payload,sizeof bios_payload,0x10000,
+        geo_zip_zlib_raw_inflate,NULL,synthetic_accept,NULL)<0);
+    assert(accept_count==1);
+    assert(geo_sd_bios_handoff(&v,1,"neo-po.bin",dst,SIZE,
+        bios_payload,sizeof bios_payload,0x20000,
+        NULL,NULL,synthetic_accept,NULL)<0);
+    assert(accept_count==1);
+    assert(geo_sd_bios_handoff(&v,1,"neo-po.bin",dst,SIZE,
+        bios_payload,sizeof bios_payload,0x20000,
+        geo_zip_zlib_raw_inflate,NULL,NULL,NULL)<0);
+    assert(accept_count==1);
+    accept_fail=1;
+    assert(geo_sd_bios_handoff(&v,1,"neo-po.bin",dst,SIZE,
+        bios_payload,sizeof bios_payload,0x20000,
+        geo_zip_zlib_raw_inflate,NULL,synthetic_accept,NULL)<0);
+    assert(accept_count==2);
+    accept_fail=0;
+
     /* Restore AES archive so the original ZIP mutation tests still apply. */
     assert(!geo_sd_bios_load(&v,1,dst,SIZE,&loaded));
     geo_zip_member m={0};

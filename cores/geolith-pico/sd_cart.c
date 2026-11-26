@@ -217,3 +217,23 @@ int geo_sd_bios_member_from_fat(fat_vol *v,int aes,const char *name,
     return geo_sd_bios_member_decode(&member,bios_buf,bios_cap,
                                      inflater,context,written);
 }
+
+/* BIOS handoff boundary for a future Geolith platform adapter. This function
+ * does not call into Geolith: the callback is provided by the host/firmware.
+ * The callback may copy the verified data but must not retain bios_buf after
+ * its caller releases the buffer. Never invoke it after a failed CRC/ZIP read.
+ */
+int geo_sd_bios_handoff(fat_vol *v,int aes,const char *member_name,
+                        void *zip_buf,size_t zip_cap,
+                        void *bios_buf,size_t bios_cap,size_t expected_size,
+                        geo_zip_raw_inflater inflater,void *inflate_context,
+                        geo_bios_accept accept,void *accept_context)
+{
+    if(!accept||!expected_size||expected_size>8u*1024u*1024u||
+       bios_cap<expected_size)return -1;
+    size_t decoded=0;
+    if(geo_sd_bios_member_from_fat(v,aes,member_name,zip_buf,zip_cap,
+                                  bios_buf,bios_cap,inflater,inflate_context,
+                                  &decoded)||decoded!=expected_size)return -1;
+    return accept(accept_context,bios_buf,decoded);
+}
