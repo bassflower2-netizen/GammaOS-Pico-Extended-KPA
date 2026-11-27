@@ -145,3 +145,18 @@ assert not any(s.startswith(("fat_", "exfat_", "__aeabi_")) for s in libc_missin
 assert {"opendir", "readdir", "closedir", "utime"} <= libc_missing
 (out / "libc-imports.txt").write_text(libc_imports)
 print("Native storage engine linked with real libc/libm/libgcc; platform imports remain:", libc_imports)
+
+# Resolve real read-only directory enumeration against the mounted FAT volume.
+directory = out / "native_dir.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-std=c11", "-Wall", "-Wextra",
+                "-Werror", "-ffreestanding", "-c", str(root / "native_dir.c"),
+                "-o", str(directory)], check=True)
+directory_linked = out / "geolith-directory-linked.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-nostdlib", "-Wl,-r",
+                "-o", str(directory_linked), str(libc_linked), str(directory),
+                "-Wl,--start-group", "-lc", "-lgcc", "-Wl,--end-group"], check=True)
+directory_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(directory_linked)], text=True)
+directory_missing = {line.split()[-1] for line in directory_imports.splitlines() if line.strip()}
+assert not {"opendir", "readdir", "closedir", "fat_opendir", "fat_readdir"} & directory_missing
+assert "utime" in directory_missing
+print("Native FAT directory adapter linked; remaining imports:", directory_imports)
