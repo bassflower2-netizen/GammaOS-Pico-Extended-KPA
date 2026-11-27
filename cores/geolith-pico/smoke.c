@@ -1,5 +1,7 @@
 /* No commercial ROM or BIOS data. This is a libretro host/ARM probe only. */
 #include "neo_format.h"
+#include "sd_cart.h"
+#include "geo_zlib.h"
 #include "libretro.h"
 #include <assert.h>
 #include <stdio.h>
@@ -32,11 +34,41 @@ static void sample(int16_t l,int16_t r){int16_t a[]={l,r};audio(a,1);}
 static void poll(void){}
 static int16_t input(unsigned p,unsigned d,unsigned i,unsigned id)
 {(void)p;(void)d;(void)i;(void)id;return 0;}
+/* Host-only fullpath adapter: load the fixture from FAT, not the original
+ * host cartridge. Native memory handoff remains a separate porting step. */
+static unsigned disk_read(void *ctx,uint32_t lba,uint32_t n,void *p)
+{
+    FILE *fp=ctx;
+    if(fseek(fp,(long)lba*512,SEEK_SET))return 0;
+    return (unsigned)fread(p,512,n,fp);
+}
+static int publish(void *ctx,int aes,const geo_bios_slot slots[4],const void *cart,size_t size)
+{
+    assert(aes==0 && slots[0].capacity==0x20000 && slots[1].capacity==0x10000);
+    assert(slots[2].capacity==0x20000 && slots[3].capacity==0x20000);
+    FILE *fp=fopen(ctx,"wb");if(!fp)return -1;
+    size_t written=fwrite(cart,1,size,fp);
+    int closed=fclose(fp);
+    return written==size && !closed ? 0 : -1;
+}
+static void stage(const char *image,const char *path)
+{
+    FILE *disk=fopen(image,"rb");assert(disk);
+    fat_vol vol;assert(!fat_mount(&vol,disk_read,disk));
+    static unsigned char archive[0x100000],cart[0x400000];
+    static unsigned char program[0x20000],lo[0x10000],sf[0x20000],sm[0x20000];
+    geo_bios_slot slots[4]={{program,sizeof program},{lo,sizeof lo},{sf,sizeof sf},{sm,sizeof sm}};
+    assert(!geo_sd_session_handoff(&vol,0,"sp-u2.sp1","/roms/neo/test.neo",
+        archive,sizeof archive,slots,cart,sizeof cart,geo_zip_zlib_raw_inflate,NULL,publish,(void *)path));
+    fclose(disk);
+    printf("FAT session cartridge delivered to runtime fullpath adapter\n");
+}
 int main(int argc,char **argv)
 {
-    assert(argc==2);dir=argv[1];
+    assert(argc==3);dir=argv[1];
     char path[512];
     assert(snprintf(path,sizeof path,"%s/test.neo",dir)>0);
+    stage(argv[2],path);
     FILE *fp=fopen(path,"rb");assert(fp);
     assert(fseek(fp,0,SEEK_END)==0);
     long size=ftell(fp);assert(size>0&&size<PICO_NEO_MAX);

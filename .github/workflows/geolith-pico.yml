@@ -89,14 +89,20 @@ jobs:
           fi
           make -C geo-upstream/libretro -j2 platform=unix CC="$CC" EXTRA_INCLUDES="$FLAGS"
           python3 cores/geolith-pico/fixture.py "$RUNNER_TEMP/geo-fixture"
+          truncate -s 64M "$RUNNER_TEMP/geo-runtime.img"
+          mkfs.fat -F 32 "$RUNNER_TEMP/geo-runtime.img"
+          mmd -i "$RUNNER_TEMP/geo-runtime.img" ::/roms ::/roms/neo ::/bios
+          mcopy -i "$RUNNER_TEMP/geo-runtime.img" "$RUNNER_TEMP/geo-fixture/test.neo" ::/roms/neo/
+          mcopy -i "$RUNNER_TEMP/geo-runtime.img" "$RUNNER_TEMP/geo-fixture/neogeo.zip" ::/bios/
+          rm "$RUNNER_TEMP/geo-fixture/test.neo"
           "$CC" $FLAGS -std=c99 -Wall -Wextra -Igeo-upstream/libretro \
-            cores/geolith-pico/neo_format.c cores/geolith-pico/smoke.c \
-            "$PWD/geo-upstream/libretro/geolith_libretro.so" -Wl,-rpath,"$PWD/geo-upstream/libretro" -o "$RUNNER_TEMP/geo-smoke"
+            cores/geolith-pico/{neo_format,smoke,sd_cart,cart_io,geo_zlib}.c emu/gba/{fat_ro,fat_exfat}.c \
+            "$PWD/geo-upstream/libretro/geolith_libretro.so" -Wl,-rpath,"$PWD/geo-upstream/libretro" -lz -o "$RUNNER_TEMP/geo-smoke"
           if [ "$ARCH" = host ]; then
-            timeout 90s "$RUNNER_TEMP/geo-smoke" "$RUNNER_TEMP/geo-fixture"
+            timeout 90s "$RUNNER_TEMP/geo-smoke" "$RUNNER_TEMP/geo-fixture" "$RUNNER_TEMP/geo-runtime.img"
           else
             arm-linux-gnueabi-readelf -h "$RUNNER_TEMP/geo-smoke"
-            timeout 120s qemu-arm -L /usr/arm-linux-gnueabi "$RUNNER_TEMP/geo-smoke" "$RUNNER_TEMP/geo-fixture"
+            timeout 120s qemu-arm -L /usr/arm-linux-gnueabi "$RUNNER_TEMP/geo-smoke" "$RUNNER_TEMP/geo-fixture" "$RUNNER_TEMP/geo-runtime.img"
           fi
   native-engine:
     runs-on: ubuntu-22.04
