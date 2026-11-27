@@ -178,6 +178,7 @@ jobs:
             ${{ runner.temp }}/geolith-native/session-imports.txt
             ${{ runner.temp }}/geolith-native/storage-imports.txt
             ${{ runner.temp }}/geolith-native/libc-imports.txt
+          ${{ runner.temp }}/geolith-native/file-imports.txt
             ${{ runner.temp }}/geolith-native/newlib-allocator-imports.txt
           if-no-files-found: error
 

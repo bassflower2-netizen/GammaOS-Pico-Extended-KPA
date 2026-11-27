@@ -160,3 +160,19 @@ directory_missing = {line.split()[-1] for line in directory_imports.splitlines()
 assert not {"opendir", "readdir", "closedir", "fat_opendir", "fat_readdir"} & directory_missing
 assert "utime" in directory_missing
 print("Native FAT directory adapter linked; remaining imports:", directory_imports)
+
+# Resolve the actual read-only newlib file calls, without providing fake writes.
+file_obj = out / "native_file.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-std=gnu11", "-Wall", "-Wextra",
+                "-Werror", "-ffreestanding", "-DGEO_NEWLIB_SYSCALLS",
+                "-c", str(root / "native_file.c"), "-o", str(file_obj)], check=True)
+file_linked = out / "geolith-file-linked.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-nostdlib", "-Wl,-r",
+                "-o", str(file_linked), str(directory_linked), str(file_obj),
+                "-Wl,--start-group", "-lc", "-lgcc", "-Wl,--end-group"], check=True)
+file_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(file_linked)], text=True)
+file_missing = {line.split()[-1] for line in file_imports.splitlines() if line.strip()}
+assert not {"_open", "_read", "_close", "_lseek", "_fstat"} & file_missing, file_missing
+assert {"_write", "utime"} <= file_missing, file_missing
+(out / "file-imports.txt").write_text(file_imports)
+print("Native FAT file adapter linked; remaining imports:", file_imports)

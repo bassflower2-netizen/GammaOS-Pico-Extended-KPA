@@ -5,6 +5,7 @@ W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 "${CC:-cc}" ${CFLAGS:-} -O2 -Wall -Wextra cores/geolith-pico/{sd_cart,sd_cart_test,cart_io,neo_format,geo_zlib}.c emu/gba/{fat_ro,fat_exfat}.c -lz -o "$W/test"
 "${CC:-cc}" ${CFLAGS:-} -O2 -Wall -Wextra cores/geolith-pico/{native_dir,native_dir_test}.c emu/gba/{fat_ro,fat_exfat}.c -o "$W/dir-test"
+"${CC:-cc}" ${CFLAGS:-} -O2 -Wall -Wextra -Werror cores/geolith-pico/{native_file,native_file_test}.c emu/gba/{fat_ro,fat_exfat}.c -o "$W/file-test"
 python3 - "$W" <<'PY'
 import pathlib,struct,sys
 w=pathlib.Path(sys.argv[1])
@@ -26,8 +27,10 @@ for bits in 16 32; do
     if [[ "${GEO_TEST_ARM:-0}" == 1 ]]; then
         timeout 120s qemu-arm -L /usr/arm-linux-gnueabi "$W/test" "$img"
         timeout 120s qemu-arm -L /usr/arm-linux-gnueabi "$W/dir-test" "$img"
+        timeout 120s qemu-arm -L /usr/arm-linux-gnueabi "$W/file-test" "$img"
     else
         "$W/test" "$img"
         "$W/dir-test" "$img"
+        "$W/file-test" "$img"
     fi
 done
