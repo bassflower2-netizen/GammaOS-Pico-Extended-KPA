@@ -4,12 +4,15 @@
 #include "geo_zlib.h"
 #include "libretro.h"
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 static const char *dir;
 static unsigned videos,frames;
-static void logline(enum retro_log_level level,const char *fmt,...){(void)level;(void)fmt;}
+static void logline(enum retro_log_level level,const char *fmt,...){
+    (void)level;va_list args;va_start(args,fmt);vfprintf(stderr,fmt,args);va_end(args);
+}
 static bool env(unsigned cmd,void *data)
 {
     switch(cmd){
@@ -85,6 +88,17 @@ static void stage(const char *image,const char *path)
     int len=snprintf(bios_path,sizeof bios_path,"%s/neogeo.zip",dir);
     assert(len>0&&(size_t)len<sizeof bios_path);
     FILE *bios=fopen(bios_path,"wb");assert(bios);
+    assert(fwrite(archive,1,zip_size,bios)==zip_size);
+    assert(!fclose(bios));
+    /* The upstream default may select AES; restore both system archives
+     * exclusively from FAT, as in the previously passing fixture layout. */
+    assert(!geo_sd_bios_set_load(&vol,1,"neo-po.bin",archive,sizeof archive,
+        slots,geo_zip_zlib_raw_inflate,NULL));
+    verify_bios(slots);
+    assert(!geo_sd_bios_load(&vol,1,archive,sizeof archive,&zip_size));
+    len=snprintf(bios_path,sizeof bios_path,"%s/aes.zip",dir);
+    assert(len>0&&(size_t)len<sizeof bios_path);
+    bios=fopen(bios_path,"wb");assert(bios);
     assert(fwrite(archive,1,zip_size,bios)==zip_size);
     assert(!fclose(bios));
     fclose(disk);
