@@ -6,6 +6,10 @@ trap 'rm -rf "$W"' EXIT
 "${CC:-cc}" ${CFLAGS:-} -O2 -Wall -Wextra cores/geolith-pico/{sd_cart,sd_cart_test,cart_io,neo_format,geo_zlib}.c emu/gba/{fat_ro,fat_exfat}.c -lz -o "$W/test"
 "${CC:-cc}" ${CFLAGS:-} -O2 -Wall -Wextra cores/geolith-pico/{native_dir,native_dir_test}.c emu/gba/{fat_ro,fat_exfat}.c -o "$W/dir-test"
 "${CC:-cc}" ${CFLAGS:-} -O2 -Wall -Wextra -Werror cores/geolith-pico/{native_file,native_file_test}.c emu/gba/{fat_ro,fat_exfat}.c -o "$W/file-test"
+# Writer uses LK kernel locks on ARM; execute real FAT writes on the host only.
+if [[ "${GEO_TEST_ARM:-0}" != 1 ]]; then
+    "${CC:-cc}" ${CFLAGS:-} -O2 -Wall -Wextra cores/geolith-pico/{sd_save,sd_save_test}.c emu/gba/{fat_ro,fat_wr,fat_exfat}.c -o "$W/save-test"
+fi
 python3 - "$W" <<'PY'
 import pathlib,struct,sys
 w=pathlib.Path(sys.argv[1])
@@ -32,5 +36,6 @@ for bits in 16 32; do
         "$W/test" "$img"
         "$W/dir-test" "$img"
         "$W/file-test" "$img"
+        "$W/save-test" "$img"
     fi
 done

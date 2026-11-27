@@ -6,6 +6,7 @@ on:
     paths:
       - 'cores/geolith-pico/**'
       - 'emu/gba/fat_ro.*'
+      - 'emu/gba/fat_wr.*'
       - 'emu/gba/fat_exfat.*'
       - '.github/workflows/geolith-pico.yml'
 permissions:

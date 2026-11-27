@@ -176,3 +176,18 @@ assert not {"_open", "_read", "_close", "_lseek", "_fstat"} & file_missing, file
 assert {"_write", "utime"} <= file_missing, file_missing
 (out / "file-imports.txt").write_text(file_imports)
 print("Native FAT file adapter linked; remaining imports:", file_imports)
+
+# Compile the dedicated persistence boundary for the target ABI. The actual
+# LK FAT writer requires device kernel locks, so do not substitute fake locks.
+save_obj = out / "sd_save.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-std=c11", "-Wall", "-Wextra",
+                "-Werror", "-ffreestanding", "-c", str(root / "sd_save.c"),
+                "-o", str(save_obj)], check=True)
+save_linked = out / "geolith-save-linked.o"
+subprocess.run(["arm-none-eabi-ld", "-r", "-o", str(save_linked),
+                str(file_linked), str(save_obj)], check=True)
+save_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(save_linked)], text=True)
+save_missing = {line.split()[-1] for line in save_imports.splitlines() if line.strip()}
+assert {"fat_wr_put", "fat_wr_mkpath"} <= save_missing, save_missing
+assert not {"fat_open", "fat_read"} & save_missing, save_missing
+print("Native save boundary linked; real LK writer binding remains open")
