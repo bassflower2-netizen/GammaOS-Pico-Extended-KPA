@@ -82,3 +82,27 @@ probe_defined = subprocess.check_output(["arm-none-eabi-nm", "--defined-only", s
 assert {"calloc", "realloc", "free", "_sbrk", "_sbrk_r", "geo_newlib_probe"} <= {line.split()[-1] for line in probe_defined.splitlines() if line.strip()}, probe_defined
 (out / "newlib-allocator-imports.txt").write_text(probe_imports)
 print("Real newlib allocator link probe passed (not executed):", probe_imports)
+
+# Link the real SD staging stack with the engine in a single native object.
+# Keep platform imports visible; this is not a flashable firmware image.
+root = pathlib.Path(__file__).resolve().parent
+bridge = []
+for source in ("neo_format.c", "cart_io.c", "sd_cart.c", "geo_zlib.c"):
+    obj = out / ("bridge_" + source + ".o")
+    subprocess.run(["arm-none-eabi-gcc", *arch, "-std=c11", "-Wall", "-Wextra",
+                    "-Werror", "-ffreestanding", "-I" + str(zlib / "include"),
+                    "-c", str(root / source), "-o", str(obj)], check=True)
+    bridge.append(obj)
+session = out / "geolith-session-linked.o"
+subprocess.run(["arm-none-eabi-ld", "-r", "-o", str(session), str(combined),
+                *map(str, bridge), str(zlib / "lib/libz.a")], check=True)
+session_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(session)], text=True)
+session_missing = {line.split()[-1] for line in session_imports.splitlines() if line.strip()}
+session_defined = {line.split()[-1] for line in subprocess.check_output(
+    ["arm-none-eabi-nm", "--defined-only", str(session)], text=True).splitlines() if line.strip()}
+assert {"geo_sd_session_handoff", "geo_sd_cart_stage", "geo_zip_zlib_raw_inflate"} <= session_defined
+assert not {"inflate", "inflateInit2_", "inflateEnd", "geo_sd_bios_set_load",
+            "geo_sd_cart_stage", "geo_cart_load", "pico_neo_validate"} & session_missing
+assert {"fat_open", "fat_read"} <= session_missing
+(out / "session-imports.txt").write_text(session_imports)
+print("Native engine and SD session relocatable link passed; FAT/platform imports remain explicit")
