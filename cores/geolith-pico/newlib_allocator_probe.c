@@ -1,6 +1,8 @@
 #include "native_heap.h"
 #include <stdlib.h>
 #include <stdint.h>
+#include <errno.h>
+int posix_memalign(void **, size_t, size_t);
 #include <string.h>
 /* Link real newlib allocation routines against the private break hook.
  * This probe is not executable on the host and is never packaged. */
@@ -25,5 +27,16 @@ int geo_newlib_probe(void)
     if (!p) return 8;
     for (size_t i = 0; i < 64; ++i) if (p[i]) return 9;
     free(p);
+    void *aligned = NULL;
+    for (size_t a = 16; a <= 4096; a *= 2) {
+        if (posix_memalign(&aligned, a, 257)) return 10;
+        if (!aligned || (uintptr_t)aligned % a) return 11;
+        memset(aligned, 0x6b, 257);
+        free(aligned);
+    }
+    aligned = arena;
+    if (posix_memalign(&aligned, 3, 32) != EINVAL || aligned != arena) return 12;
+    if (posix_memalign(&aligned, 64, oversized) != ENOMEM || aligned != arena) return 13;
+    if (posix_memalign(&aligned, 64, SIZE_MAX) != ENOMEM || aligned != arena) return 14;
     return 0;
 }
