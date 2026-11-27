@@ -94,7 +94,7 @@ jobs:
           mmd -i "$RUNNER_TEMP/geo-runtime.img" ::/roms ::/roms/neo ::/bios
           mcopy -i "$RUNNER_TEMP/geo-runtime.img" "$RUNNER_TEMP/geo-fixture/test.neo" ::/roms/neo/
           mcopy -i "$RUNNER_TEMP/geo-runtime.img" "$RUNNER_TEMP/geo-fixture/neogeo.zip" ::/bios/
-          rm "$RUNNER_TEMP/geo-fixture/test.neo"
+          rm "$RUNNER_TEMP/geo-fixture/test.neo" "$RUNNER_TEMP/geo-fixture/neogeo.zip" "$RUNNER_TEMP/geo-fixture/aes.zip"
           "$CC" $FLAGS -std=c99 -Wall -Wextra -Igeo-upstream/libretro \
             cores/geolith-pico/{neo_format,smoke,sd_cart,cart_io,geo_zlib}.c emu/gba/{fat_ro,fat_exfat}.c \
             "$PWD/geo-upstream/libretro/geolith_libretro.so" -Wl,-rpath,"$PWD/geo-upstream/libretro" -lz -o "$RUNNER_TEMP/geo-smoke"

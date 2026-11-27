@@ -42,10 +42,27 @@ static unsigned disk_read(void *ctx,uint32_t lba,uint32_t n,void *p)
     if(fseek(fp,(long)lba*512,SEEK_SET))return 0;
     return (unsigned)fread(p,512,n,fp);
 }
+/* Compare every staged BIOS byte with the original synthetic fixture
+ * contract before publishing the cartridge. */
+static void verify_bios(const geo_bios_slot slots[4])
+{
+    const unsigned char *p=slots[0].data;
+    static const unsigned char reset[]={0x10,0,0,0xff,0xc0,0,0,1};
+    static const unsigned char vector[]={0xc0,0,0,1};
+    assert(!memcmp(p,reset,sizeof reset));
+    for(size_t i=8;i<0x100;i+=4)assert(!memcmp(p+i,vector,4));
+    assert(p[0x100]==0xfe&&p[0x101]==0x60);
+    for(size_t i=0x102;i<slots[0].capacity;i++)assert(!p[i]);
+    for(unsigned s=1;s<4;s++){
+        p=slots[s].data;
+        for(size_t i=0;i<slots[s].capacity;i++)assert(p[i]==(s==3?0x76:0));
+    }
+}
 static int publish(void *ctx,int aes,const geo_bios_slot slots[4],const void *cart,size_t size)
 {
     assert(aes==0 && slots[0].capacity==0x20000 && slots[1].capacity==0x10000);
     assert(slots[2].capacity==0x20000 && slots[3].capacity==0x20000);
+    verify_bios(slots);
     FILE *fp=fopen(ctx,"wb");if(!fp)return -1;
     size_t written=fwrite(cart,1,size,fp);
     int closed=fclose(fp);
@@ -60,6 +77,16 @@ static void stage(const char *image,const char *path)
     geo_bios_slot slots[4]={{program,sizeof program},{lo,sizeof lo},{sf,sizeof sf},{sm,sizeof sm}};
     assert(!geo_sd_session_handoff(&vol,0,"sp-u2.sp1","/roms/neo/test.neo",
         archive,sizeof archive,slots,cart,sizeof cart,geo_zip_zlib_raw_inflate,NULL,publish,(void *)path));
+    /* Export the exact archive read from FAT for the fullpath engine.
+     * The original host BIOS archive is removed by CI before this test. */
+    size_t zip_size=0;
+    assert(!geo_sd_bios_load(&vol,0,archive,sizeof archive,&zip_size));
+    char bios_path[512];
+    int len=snprintf(bios_path,sizeof bios_path,"%s/neogeo.zip",dir);
+    assert(len>0&&(size_t)len<sizeof bios_path);
+    FILE *bios=fopen(bios_path,"wb");assert(bios);
+    assert(fwrite(archive,1,zip_size,bios)==zip_size);
+    assert(!fclose(bios));
     fclose(disk);
     printf("FAT session cartridge delivered to runtime fullpath adapter\n");
 }
