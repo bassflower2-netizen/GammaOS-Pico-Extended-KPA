@@ -127,3 +127,20 @@ storage_defined = {line.split()[-1] for line in subprocess.check_output(
 assert {"fat_mount", "fat_open", "fat_read", "geo_sd_session_handoff"} <= storage_defined
 (out / "storage-imports.txt").write_text(storage_imports)
 print("Native Geolith session and firmware FAT reader link passed")
+
+# Resolve real newlib/libm/compiler helpers for the entire native storage
+# engine, rather than only the isolated allocator. Keep platform syscalls
+# unresolved: no dummy success callbacks or executable firmware here.
+libc_linked = out / "geolith-libc-linked.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-nostdlib", "-Wl,-r",
+                "-o", str(libc_linked), str(storage),
+                "-Wl,--start-group", "-lc", "-lm", "-lgcc",
+                "-Wl,--end-group"], check=True)
+libc_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(libc_linked)], text=True)
+libc_missing = {line.split()[-1] for line in libc_imports.splitlines() if line.strip()}
+assert not {"malloc", "calloc", "realloc", "free", "memcpy", "memset",
+            "fopen", "fread", "fclose", "printf", "sqrt", "pow", "_sbrk"} & libc_missing, libc_missing
+assert not any(s.startswith(("fat_", "exfat_", "__aeabi_")) for s in libc_missing), libc_missing
+assert {"opendir", "readdir", "closedir", "utime"} <= libc_missing
+(out / "libc-imports.txt").write_text(libc_imports)
+print("Native storage engine linked with real libc/libm/libgcc; platform imports remain:", libc_imports)

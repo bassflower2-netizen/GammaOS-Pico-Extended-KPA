@@ -173,6 +173,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Geolith-native-engine-inventory-NOT-FOR-FLASHING
-          path: ${{ runner.temp }}/geolith-native/undefined.txt
+          path: |
+            ${{ runner.temp }}/geolith-native/undefined.txt
+            ${{ runner.temp }}/geolith-native/session-imports.txt
+            ${{ runner.temp }}/geolith-native/storage-imports.txt
+            ${{ runner.temp }}/geolith-native/libc-imports.txt
+            ${{ runner.temp }}/geolith-native/newlib-allocator-imports.txt
           if-no-files-found: error
 
