@@ -99,3 +99,5 @@ At 4f39d28 both workflows passed (45905551330 and 45905548914); logs confirm FAT
 
 ## Combined SD session staging
 At 5df03f2 both runs 45949773136 and 45949773145 passed; logs confirm FAT fixtures, host/ARM synthetic runtime, newlib execution and integration artifact. Stage BIOS and cartridge together before a single consumer call, reject overlapping cartridge storage and propagate consumer refusal. FAT fixture tests cover success, missing BIOS, invalid cartridge, overlap and refusal. New CI pending; actual engine binding and hardware testing remain open.
+
+At 3928e05 both CI runs 45959540607 and 45959540653 passed (FAT fixtures, host/ARM runtime, native newlib and baseline integration). Reject session descriptor aliasing with staging destinations to prevent metadata corruption. Added regression coverage; new CI pending. Native engine binding remains open.

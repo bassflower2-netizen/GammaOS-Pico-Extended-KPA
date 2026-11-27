@@ -198,6 +198,16 @@ int main(int argc,char **argv)
     assert(geo_sd_session_handoff(&v,1,"neo-po.bin","/roms/neo/Test Cart.NEO",
         dst,SIZE,slots,session_cart,sizeof session_cart,geo_zip_zlib_raw_inflate,NULL,accept_session,&session_calls)<0);
     assert(session_calls==2);
+    /* MVS uses a different program archive; exercise the full session too. */
+    assert(!geo_sd_bios_set_load(&v,0,"sp-u2.sp1",dst,SIZE,slots,
+        geo_zip_zlib_raw_inflate,NULL));
+    /* Descriptor storage must not be overwritten by staging. */
+    geo_bios_slot alias[4]={{bios_payload,sizeof bios_payload},
+        {lo,sizeof lo},{sfix,sizeof sfix},{sm1,sizeof sm1}};
+    alias[0].data=alias;
+    assert(geo_sd_session_handoff(&v,1,"neo-po.bin","/roms/neo/Test Cart.NEO",
+        dst,SIZE,alias,session_cart,sizeof session_cart,geo_zip_zlib_raw_inflate,NULL,accept_session,NULL)<0);
+    assert(session_calls==2);
     slots[3].data=sfix;
     assert(geo_sd_bios_set_load(&v,1,"neo-po.bin",dst,SIZE,slots,
                                 geo_zip_zlib_raw_inflate,NULL)<0);

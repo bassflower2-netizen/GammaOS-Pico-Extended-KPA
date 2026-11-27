@@ -318,9 +318,12 @@ int geo_sd_session_handoff(fat_vol *v,int aes,const char *program,const char *pa
                            void *inflate_context,geo_session_accept accept,void *context)
 {
     static const size_t sizes[4]={0x20000,0x10000,0x20000,0x20000};
-    if(!accept||!slots||!session_disjoint(archive,archive_cap,cart,cart_cap))return -1;
+    if(!accept||!slots||!session_disjoint(archive,archive_cap,cart,cart_cap)||
+       !session_disjoint(slots,4*sizeof *slots,archive,archive_cap)||
+       !session_disjoint(slots,4*sizeof *slots,cart,cart_cap))return -1;
     for(unsigned i=0;i<4;i++)
-        if(!session_disjoint(cart,cart_cap,slots[i].data,sizes[i]))return -1;
+        if(!session_disjoint(cart,cart_cap,slots[i].data,sizes[i])||
+           !session_disjoint(slots,4*sizeof *slots,slots[i].data,sizes[i]))return -1;
     if(geo_sd_bios_set_load(v,aes,program,archive,archive_cap,slots,
                             inflater,inflate_context))return -1;
     size_t loaded=0;
