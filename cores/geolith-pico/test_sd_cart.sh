@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
-cc -O2 -Wall -Wextra cores/geolith-pico/{sd_cart,sd_cart_test,cart_io,neo_format,geo_zlib}.c emu/gba/{fat_ro,fat_exfat}.c -lz -o "$W/test"
+"${CC:-cc}" ${CFLAGS:-} -O2 -Wall -Wextra cores/geolith-pico/{sd_cart,sd_cart_test,cart_io,neo_format,geo_zlib}.c emu/gba/{fat_ro,fat_exfat}.c -lz -o "$W/test"
 python3 - "$W" <<'PY'
 import pathlib,struct,sys
 w=pathlib.Path(sys.argv[1])
@@ -22,5 +22,9 @@ for bits in 16 32; do
     mmd -i "$img" ::/roms ::/roms/neo ::/bios
     mcopy -i "$img" "$W/Test Cart.NEO" "$W/bad.neo" ::/roms/neo/
     mcopy -i "$img" "$W/bios/aes.zip" "$W/bios/neogeo.zip" ::/bios/
-    "$W/test" "$img"
+    if [[ "${GEO_TEST_ARM:-0}" == 1 ]]; then
+        timeout 120s qemu-arm -L /usr/arm-linux-gnueabi "$W/test" "$img"
+    else
+        "$W/test" "$img"
+    fi
 done

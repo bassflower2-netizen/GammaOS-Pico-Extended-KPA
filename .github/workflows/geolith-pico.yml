@@ -66,6 +66,9 @@ jobs:
             chmod +x "$RUNNER_TEMP/geo-arm-cc"
             CC="$RUNNER_TEMP/geo-arm-cc"
           fi
+          if [ "$ARCH" = arm-linux-soft ]; then
+            CC="$CC" CFLAGS="$FLAGS" GEO_TEST_ARM=1 bash cores/geolith-pico/test_sd_cart.sh
+          fi
           "$CC" $FLAGS -std=c11 -Wall -Wextra -Werror cores/geolith-pico/arena.c cores/geolith-pico/arena_test.c -o "$RUNNER_TEMP/geo-arena-test"
           if [ "$ARCH" = host ]; then
             "$RUNNER_TEMP/geo-arena-test"
