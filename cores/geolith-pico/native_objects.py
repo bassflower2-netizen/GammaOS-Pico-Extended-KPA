@@ -191,3 +191,29 @@ save_missing = {line.split()[-1] for line in save_imports.splitlines() if line.s
 assert {"fat_wr_put", "fat_wr_mkpath"} <= save_missing, save_missing
 assert not {"fat_open", "fat_read"} & save_missing, save_missing
 print("Native save boundary linked; real LK writer binding remains open")
+
+# Compile the actual firmware writer with LK's real ARM headers and preserve
+# its synchronization imports. Never execute this relocatable object on Linux:
+# IRQ controls and LK mutexes belong to the firmware kernel.
+firmware_root = root.parent.parent
+writer = out / "session_fat_wr.c.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-std=gnu11", "-Os",
+                "-ffreestanding", "-fno-builtin", "-DARCH_ARM=1", "-DDEBUGLEVEL=0",
+                "-D_SIZE_T_DEFINED_", "-I" + str(firmware_root / "include"),
+                "-I" + str(firmware_root / "arch/arm/include"),
+                "-Werror=implicit-function-declaration",
+                "-c", str(firmware_root / "emu/gba/fat_wr.c"), "-o", str(writer)], check=True)
+writer_linked = out / "geolith-writer-linked.o"
+subprocess.run(["arm-none-eabi-ld", "-r", "-o", str(writer_linked),
+                str(save_linked), str(writer)], check=True)
+writer_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(writer_linked)], text=True)
+writer_missing = {line.split()[-1] for line in writer_imports.splitlines() if line.strip()}
+writer_defined = {line.split()[-1] for line in subprocess.check_output(
+    ["arm-none-eabi-nm", "--defined-only", str(writer_linked)], text=True).splitlines() if line.strip()}
+assert {"geo_sd_save_put", "geo_sd_save_get", "fat_wr_put", "fat_wr_mkpath",
+        "fat_wr_delete"} <= writer_defined, writer_defined
+assert not any(s.startswith(("fat_", "exfat_")) for s in writer_missing), writer_missing
+assert {"mutex_init", "mutex_acquire", "mutex_release", "critical_section_count",
+        "arch_disable_ints", "arch_enable_ints"} <= writer_missing, writer_missing
+(out / "writer-imports.txt").write_text(writer_imports)
+print("Actual LK FAT writer linked with native Geolith; kernel synchronization imports preserved:", writer_imports)
