@@ -65,4 +65,11 @@ typedef int (*geo_bios_set_accept)(void *,int,const geo_bios_slot [4]);
 int geo_sd_bios_set_handoff(fat_vol *,int,const char *,void *,size_t,
                             geo_bios_slot [4],geo_zip_raw_inflater,void *,
                             geo_bios_set_accept,void *);
+/* Stage BIOS and cartridge together before invoking the engine consumer.
+ * Archive, cartridge and BIOS backing buffers must be disjoint.
+ * On failure discard staged bytes; callback must handle engine rollback. */
+typedef int (*geo_session_accept)(void *,int,const geo_bios_slot [4],const void *,size_t);
+int geo_sd_session_handoff(fat_vol *,int,const char *,const char *,
+                           void *,size_t,geo_bios_slot [4],void *,size_t,
+                           geo_zip_raw_inflater,void *,geo_session_accept,void *);
 #endif

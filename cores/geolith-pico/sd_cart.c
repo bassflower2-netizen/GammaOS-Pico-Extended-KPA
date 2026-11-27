@@ -305,3 +305,27 @@ int geo_sd_bios_set_handoff(fat_vol *v,int aes,const char *program,
         {slots[3].data,0x20000}};
     return accept(accept_context,aes,verified);
 }
+
+static int session_disjoint(const void *a,size_t an,const void *b,size_t bn)
+{
+    uintptr_t x=(uintptr_t)a,y=(uintptr_t)b;
+    return x&&y&&an&&bn&&an<=UINTPTR_MAX-x&&bn<=UINTPTR_MAX-y&&
+           (x+an<=y||y+bn<=x);
+}
+int geo_sd_session_handoff(fat_vol *v,int aes,const char *program,const char *path,
+                           void *archive,size_t archive_cap,geo_bios_slot slots[4],
+                           void *cart,size_t cart_cap,geo_zip_raw_inflater inflater,
+                           void *inflate_context,geo_session_accept accept,void *context)
+{
+    static const size_t sizes[4]={0x20000,0x10000,0x20000,0x20000};
+    if(!accept||!slots||!session_disjoint(archive,archive_cap,cart,cart_cap))return -1;
+    for(unsigned i=0;i<4;i++)
+        if(!session_disjoint(cart,cart_cap,slots[i].data,sizes[i]))return -1;
+    if(geo_sd_bios_set_load(v,aes,program,archive,archive_cap,slots,
+                            inflater,inflate_context))return -1;
+    size_t loaded=0;
+    if(geo_sd_cart_stage(v,path,cart,cart_cap,&loaded))return -1;
+    const geo_bios_slot verified[4]={{slots[0].data,sizes[0]},
+        {slots[1].data,sizes[1]},{slots[2].data,sizes[2]},{slots[3].data,sizes[3]}};
+    return accept(context,aes,verified,cart,loaded);
+}

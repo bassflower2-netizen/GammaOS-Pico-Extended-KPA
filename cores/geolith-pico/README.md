@@ -96,3 +96,6 @@ At 26c1354 both workflows passed (45895637682, 45895637648); job logs confirm ho
 
 ## Exact cartridge staging and publication
 At 4f39d28 both workflows passed (45905551330 and 45905548914); logs confirm FAT fixtures, host/ARM synthetic runtime and native newlib execution. Expose exact validated cartridge file length and a single acceptance callback after complete FAT read; preserve the old loader API. FAT fixture regression checks oversized backing buffer, invalid cartridge, insufficient capacity, null callback and refusal. This prepares the engine session boundary but does not bind the native engine or enable a firmware core. New CI pending; hardware tests deferred.
+
+## Combined SD session staging
+At 5df03f2 both runs 45949773136 and 45949773145 passed; logs confirm FAT fixtures, host/ARM synthetic runtime, newlib execution and integration artifact. Stage BIOS and cartridge together before a single consumer call, reject overlapping cartridge storage and propagate consumer refusal. FAT fixture tests cover success, missing BIOS, invalid cartridge, overlap and refusal. New CI pending; actual engine binding and hardware testing remain open.

@@ -67,6 +67,18 @@ static int accept_cart(void *ctx,const void *data,size_t size)
     ++cart_calls;
     return ctx?-1:0;
 }
+static unsigned session_calls;
+static unsigned char session_cart[SIZE+1];
+static int accept_session(void *ctx,int aes,const geo_bios_slot slots[4],
+                          const void *cart,size_t size)
+{
+    assert(aes==1&&slots[0].data==bios_payload&&slots[0].capacity==0x20000);
+    assert(slots[1].capacity==0x10000&&slots[2].capacity==0x20000&&slots[3].capacity==0x20000);
+    assert(cart==session_cart&&size==SIZE&&session_cart[SIZE-1]==0x5a);
+    assert(session_cart[SIZE]==0x7e);
+    ++session_calls;
+    return ctx?-1:0;
+}
 int main(int argc,char **argv)
 {
     assert(argc==2);
@@ -172,6 +184,20 @@ int main(int argc,char **argv)
     assert(geo_sd_bios_set_handoff(&v,1,"neo-po.bin",dst,SIZE,slots,
         geo_zip_zlib_raw_inflate,NULL,NULL,NULL)<0);
     assert(set_calls==2);
+    session_cart[SIZE]=0x7e;
+    assert(!geo_sd_session_handoff(&v,1,"neo-po.bin","/roms/neo/Test Cart.NEO",
+        dst,SIZE,slots,session_cart,sizeof session_cart,geo_zip_zlib_raw_inflate,NULL,accept_session,NULL));
+    assert(session_calls==1);
+    assert(geo_sd_session_handoff(&v,1,"neo-po.bin","/roms/neo/bad.neo",
+        dst,SIZE,slots,session_cart,sizeof session_cart,geo_zip_zlib_raw_inflate,NULL,accept_session,NULL)<0);
+    assert(geo_sd_session_handoff(&v,1,"missing.bin","/roms/neo/Test Cart.NEO",
+        dst,SIZE,slots,session_cart,sizeof session_cart,geo_zip_zlib_raw_inflate,NULL,accept_session,NULL)<0);
+    assert(geo_sd_session_handoff(&v,1,"neo-po.bin","/roms/neo/Test Cart.NEO",
+        dst,SIZE,slots,dst,SIZE,geo_zip_zlib_raw_inflate,NULL,accept_session,NULL)<0);
+    assert(session_calls==1);
+    assert(geo_sd_session_handoff(&v,1,"neo-po.bin","/roms/neo/Test Cart.NEO",
+        dst,SIZE,slots,session_cart,sizeof session_cart,geo_zip_zlib_raw_inflate,NULL,accept_session,&session_calls)<0);
+    assert(session_calls==2);
     slots[3].data=sfix;
     assert(geo_sd_bios_set_load(&v,1,"neo-po.bin",dst,SIZE,slots,
                                 geo_zip_zlib_raw_inflate,NULL)<0);
