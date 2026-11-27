@@ -4,6 +4,12 @@
 #include "../../emu/gba/fat_ro.h"
 /* Caller owns mounted volume and ROM arena. On error discard destination. */
 int geo_sd_cart_load(fat_vol *,const char *,void *,size_t);
+/* Exact validated file length on success; zero on failure. */
+int geo_sd_cart_stage(fat_vol *,const char *,void *,size_t,size_t *);
+/* Publish only a completely read and validated cartridge. Buffer remains
+ * caller-owned; callback refusal is propagated. No engine start here. */
+typedef int (*geo_cart_accept)(void *,const void *,size_t);
+int geo_sd_cart_handoff(fat_vol *,const char *,void *,size_t,geo_cart_accept,void *);
 /* aes=1 selects aes.zip, aes=0 selects neogeo.zip. On failure loaded=0. */
 int geo_sd_bios_load(fat_vol *,int,void *,size_t,size_t *);
 /* ZIP central-directory structure only; no decompression/CRC verification. */

@@ -5,8 +5,10 @@ static int read_at(void *ctx,uint32_t off,void *dst,uint32_t n)
 {
     return fat_read(ctx,off,dst,n)==n?(int)n:-1;
 }
-int geo_sd_cart_load(fat_vol *v,const char *path,void *dst,size_t cap)
+int geo_sd_cart_stage(fat_vol *v,const char *path,void *dst,size_t cap,size_t *loaded)
 {
+    if(!loaded)return -1;
+    *loaded=0;
     if(!v||!v->mounted||!path||path[0]!='/'||!dst)return -1;
     size_t len=strlen(path);
     if(len<5||len>=640||!fat_name_eq(path+len-4,".neo"))return -1;
@@ -20,7 +22,21 @@ int geo_sd_cart_load(fat_vol *v,const char *path,void *dst,size_t cap)
     }
     fat_file f;
     if(fat_open(v,path,&f))return -1;
-    return geo_cart_load(read_at,&f,f.size,dst,cap);
+    if(geo_cart_load(read_at,&f,f.size,dst,cap))return -1;
+    *loaded=f.size;
+    return 0;
+}
+int geo_sd_cart_load(fat_vol *v,const char *path,void *dst,size_t cap)
+{
+    size_t loaded;
+    return geo_sd_cart_stage(v,path,dst,cap,&loaded);
+}
+int geo_sd_cart_handoff(fat_vol *v,const char *path,void *dst,size_t cap,
+                        geo_cart_accept accept,void *context)
+{
+    size_t loaded;
+    if(!accept||geo_sd_cart_stage(v,path,dst,cap,&loaded))return -1;
+    return accept(context,dst,loaded);
 }
 
 

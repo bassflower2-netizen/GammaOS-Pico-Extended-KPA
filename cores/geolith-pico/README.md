@@ -93,3 +93,6 @@ At 26a4d59 both workflows passed (45855122835 and 45855122915), including FAT16/
 
 ## Exact BIOS publication lengths
 At 26c1354 both workflows passed (45895637682, 45895637648); job logs confirm host FAT fixtures, ARM runtime, native engine compilation and newlib execution. Publish exact verified ROM lengths rather than caller buffer capacities, preventing engine consumers from reading uninitialized tails. Regression checks cover oversized backing storage and unchanged caller descriptors. Native engine binding remains open; new CI pending, no hardware tests.
+
+## Exact cartridge staging and publication
+At 4f39d28 both workflows passed (45905551330 and 45905548914); logs confirm FAT fixtures, host/ARM synthetic runtime and native newlib execution. Expose exact validated cartridge file length and a single acceptance callback after complete FAT read; preserve the old loader API. FAT fixture regression checks oversized backing buffer, invalid cartridge, insufficient capacity, null callback and refusal. This prepares the engine session boundary but does not bind the native engine or enable a firmware core. New CI pending; hardware tests deferred.

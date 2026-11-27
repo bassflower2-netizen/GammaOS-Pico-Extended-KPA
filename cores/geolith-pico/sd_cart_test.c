@@ -59,6 +59,14 @@ static int accept_set(void *ctx,int aes,const geo_bios_slot slots[4])
     ++set_calls;
     return ctx?-1:0;
 }
+static unsigned cart_calls;
+static int accept_cart(void *ctx,const void *data,size_t size)
+{
+    assert(data==dst&&size==SIZE);
+    assert(dst[4096]==0x5a&&dst[SIZE-1]==0x5a&&dst[SIZE]==0x7e);
+    ++cart_calls;
+    return ctx?-1:0;
+}
 int main(int argc,char **argv)
 {
     assert(argc==2);
@@ -71,6 +79,17 @@ int main(int argc,char **argv)
     assert(geo_sd_cart_load(&v,"/roms/neo/../neo/Test Cart.NEO",dst,SIZE)<0);
     assert(geo_sd_cart_load(&v,"/roms/neo/missing.neo",dst,SIZE)<0);
     assert(geo_sd_cart_load(&v,"/roms/neo/bad.neo",dst,SIZE)<0);
+    size_t staged=99;
+    assert(!geo_sd_cart_stage(&v,"/roms/neo/Test Cart.NEO",dst,sizeof dst,&staged)&&staged==SIZE);
+    assert(geo_sd_cart_stage(&v,"/roms/neo/bad.neo",dst,sizeof dst,&staged)<0&&staged==0);
+    assert(!geo_sd_cart_handoff(&v,"/roms/neo/Test Cart.NEO",dst,sizeof dst,accept_cart,NULL));
+    assert(cart_calls==1);
+    assert(geo_sd_cart_handoff(&v,"/roms/neo/bad.neo",dst,sizeof dst,accept_cart,NULL)<0);
+    assert(geo_sd_cart_handoff(&v,"/roms/neo/Test Cart.NEO",dst,SIZE-1,accept_cart,NULL)<0);
+    assert(geo_sd_cart_handoff(&v,"/roms/neo/Test Cart.NEO",dst,sizeof dst,NULL,NULL)<0);
+    assert(cart_calls==1);
+    assert(geo_sd_cart_handoff(&v,"/roms/neo/Test Cart.NEO",dst,sizeof dst,accept_cart,&cart_calls)<0);
+    assert(cart_calls==2);
     size_t loaded=99;
     assert(!geo_sd_bios_load(&v,1,dst,SIZE,&loaded)&&loaded>22);
     assert(dst[0]=='P'&&dst[1]=='K');
