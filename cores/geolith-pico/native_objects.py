@@ -106,3 +106,24 @@ assert not {"inflate", "inflateInit2_", "inflateEnd", "geo_sd_bios_set_load",
 assert {"fat_open", "fat_read"} <= session_missing
 (out / "session-imports.txt").write_text(session_imports)
 print("Native engine and SD session relocatable link passed; FAT/platform imports remain explicit")
+
+# Resolve the actual firmware FAT reader, including its exFAT dependency.
+fat_objects = []
+for source in ("fat_ro.c", "fat_exfat.c"):
+    obj = out / ("session_" + source + ".o")
+    subprocess.run(["arm-none-eabi-gcc", *arch, "-std=gnu11", "-Os",
+                    "-ffreestanding", "-Werror=implicit-function-declaration",
+                    "-c", str(root.parent.parent / "emu/gba" / source),
+                    "-o", str(obj)], check=True)
+    fat_objects.append(obj)
+storage = out / "geolith-storage-linked.o"
+subprocess.run(["arm-none-eabi-ld", "-r", "-o", str(storage), str(session),
+                *map(str, fat_objects)], check=True)
+storage_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(storage)], text=True)
+storage_missing = {line.split()[-1] for line in storage_imports.splitlines() if line.strip()}
+assert not any(s.startswith(("fat_", "exfat_")) for s in storage_missing), storage_missing
+storage_defined = {line.split()[-1] for line in subprocess.check_output(
+    ["arm-none-eabi-nm", "--defined-only", str(storage)], text=True).splitlines() if line.strip()}
+assert {"fat_mount", "fat_open", "fat_read", "geo_sd_session_handoff"} <= storage_defined
+(out / "storage-imports.txt").write_text(storage_imports)
+print("Native Geolith session and firmware FAT reader link passed")
