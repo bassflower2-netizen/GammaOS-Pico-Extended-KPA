@@ -5,4 +5,6 @@
 /* Caller owns handle and destination; read_at returns bytes or negative error. */
 typedef int (*geo_cart_read_at)(void *,uint32_t,void *,uint32_t);
 int geo_cart_load(geo_cart_read_at read_at,void *ctx,uint32_t size,void *dst,size_t capacity);
+/* Stable FNV-1a identity over the exact validated cartridge bytes. Not cryptographic. */
+uint64_t geo_cart_key(const void *data,size_t size);
 #endif

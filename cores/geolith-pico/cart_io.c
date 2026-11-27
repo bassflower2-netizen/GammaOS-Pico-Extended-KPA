@@ -14,3 +14,13 @@ int geo_cart_load(geo_cart_read_at read_at,void *ctx,uint32_t size,void *dst,siz
     }
     return 0;
 }
+
+uint64_t geo_cart_key(const void *data,size_t size)
+{
+    const uint8_t *p=data;
+    uint64_t key=UINT64_C(14695981039346656037);
+    for(size_t i=0;i<size;i++){
+        key^=p[i];key*=UINT64_C(1099511628211);
+    }
+    return key;
+}

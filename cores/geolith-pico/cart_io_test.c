@@ -19,6 +19,11 @@ int main(void){
     dst[SIZE]=0x7e;
     assert(geo_cart_load(rd,&f,SIZE,dst,SIZE)==0);
     assert(dst[4096]==0x5a && dst[SIZE-1]==0x5a && dst[SIZE]==0x7e);
+    assert(geo_cart_key("hello",5)==UINT64_C(0xa430d84680aabd0b));
+    uint64_t key=geo_cart_key(dst,SIZE);
+    dst[SIZE]^=1;assert(geo_cart_key(dst,SIZE)==key);
+    dst[SIZE-1]^=1;assert(geo_cart_key(dst,SIZE)!=key);
+    dst[SIZE-1]^=1;assert(geo_cart_key(dst,SIZE)==key);
     f.calls=0;assert(geo_cart_load(rd,&f,SIZE,dst,SIZE-1)<0 && !f.calls);
     hdr[0]=0;assert(geo_cart_load(rd,&f,SIZE,dst,SIZE)<0 && f.calls==1);
     hdr[0]='N';f.fail=1;assert(geo_cart_load(rd,&f,SIZE,dst,SIZE)<0);

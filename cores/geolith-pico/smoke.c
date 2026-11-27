@@ -2,6 +2,10 @@
 #include "neo_format.h"
 #include "sd_cart.h"
 #include "geo_zlib.h"
+#include "cart_io.h"
+#ifdef GEO_RUNTIME_FAT_SAVE
+#include "sd_save.h"
+#endif
 #include "libretro.h"
 #include <assert.h>
 #include <stdarg.h>
@@ -45,6 +49,34 @@ static unsigned disk_read(void *ctx,uint32_t lba,uint32_t n,void *p)
     if(fseek(fp,(long)lba*512,SEEK_SET))return 0;
     return (unsigned)fread(p,512,n,fp);
 }
+#ifdef GEO_RUNTIME_FAT_SAVE
+static unsigned disk_write(void *ctx,uint32_t lba,uint32_t n,const void *p)
+{
+    FILE *fp=ctx;
+    if(fseek(fp,(long)lba*512,SEEK_SET))return 0;
+    return (unsigned)fwrite(p,512,n,fp);
+}
+/* The host test uses the MVS storage namespace as a fixture label; engine
+ * mode detection and actual device writer binding are separate work. */
+static void state_roundtrip(const char *image,uint64_t key,const void *state,void *restored,uint32_t n)
+{
+    FILE *disk=fopen(image,"r+b");assert(disk);
+    fat_vol vol;assert(!fat_mount(&vol,disk_read,disk));
+    fat_set_writer(&vol,disk_write);
+    assert(!geo_sd_save_put(&vol,key,0,0,state,n));
+    assert(!fclose(disk));
+    disk=fopen(image,"rb");assert(disk);
+    assert(!fat_mount(&vol,disk_read,disk));
+    memset(restored,0,n);
+    assert(!geo_sd_save_get(&vol,key,0,0,restored,n));
+    assert(!memcmp(restored,state,n));
+    assert(geo_sd_save_get(&vol,key^1u,0,0,restored,n)==-2);
+    assert(geo_sd_save_get(&vol,key,1,0,restored,n)==-2);
+    assert(geo_sd_save_get(&vol,key,0,1,restored,n)==-2);
+    assert(!fclose(disk));
+    puts("Geolith runtime state restored from remounted FAT image");
+}
+#endif
 /* Compare every staged BIOS byte with the original synthetic fixture
  * contract before publishing the cartridge. */
 static void verify_bios(const geo_bios_slot slots[4])
@@ -121,6 +153,8 @@ int main(int argc,char **argv)
     assert(pico_neo_validate(rom,size+1)<0);
     uint8_t old[4];memcpy(old,rom+4,4);memset(rom+4,255,4);
     assert(pico_neo_validate(rom,size)<0);memcpy(rom+4,old,4);
+    uint64_t key=geo_cart_key(rom,(size_t)size);
+    assert(key==geo_cart_key(rom,(size_t)size));
     free(rom);
     retro_set_environment(env);
     retro_set_video_refresh(video);
@@ -138,7 +172,16 @@ int main(int argc,char **argv)
     size_t n=retro_serialize_size();assert(n>65536&&n<16u*1024u*1024u);
     void *state=malloc(n);assert(state);
     assert(retro_serialize(state,n));
-    retro_run();assert(retro_unserialize(state,n));
+    retro_run();
+#ifdef GEO_RUNTIME_FAT_SAVE
+    void *restored=malloc(n);assert(restored);
+    state_roundtrip(argv[2],key,state,restored,(uint32_t)n);
+    assert(retro_unserialize(restored,n));
+    free(restored);
+#else
+    (void)key;
+    assert(retro_unserialize(state,n));
+#endif
     retro_run();free(state);
     retro_unload_game();retro_deinit();
     printf("Geolith synthetic cartridge: %u video callbacks, %u stereo frames, %lu byte state\n",videos,frames,(unsigned long)n);

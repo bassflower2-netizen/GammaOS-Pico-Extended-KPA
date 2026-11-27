@@ -97,8 +97,14 @@ jobs:
           mcopy -i "$RUNNER_TEMP/geo-runtime.img" "$RUNNER_TEMP/geo-fixture/neogeo.zip" ::/bios/
           mcopy -i "$RUNNER_TEMP/geo-runtime.img" "$RUNNER_TEMP/geo-fixture/aes.zip" ::/bios/
           rm "$RUNNER_TEMP/geo-fixture/test.neo" "$RUNNER_TEMP/geo-fixture/neogeo.zip" "$RUNNER_TEMP/geo-fixture/aes.zip"
-          "$CC" $FLAGS -std=c99 -Wall -Wextra -Igeo-upstream/libretro \
-            cores/geolith-pico/{neo_format,smoke,sd_cart,cart_io,geo_zlib}.c emu/gba/{fat_ro,fat_exfat}.c \
+          SAVE_FLAGS=""
+          SAVE_SOURCES=""
+          if [ "$ARCH" = host ]; then
+            SAVE_FLAGS="-DGEO_RUNTIME_FAT_SAVE"
+            SAVE_SOURCES="cores/geolith-pico/sd_save.c emu/gba/fat_wr.c"
+          fi
+          "$CC" $FLAGS $SAVE_FLAGS -std=c99 -Wall -Wextra -Igeo-upstream/libretro \
+            cores/geolith-pico/{neo_format,smoke,sd_cart,cart_io,geo_zlib}.c emu/gba/{fat_ro,fat_exfat}.c $SAVE_SOURCES \
             "$PWD/geo-upstream/libretro/geolith_libretro.so" -Wl,-rpath,"$PWD/geo-upstream/libretro" -lz -o "$RUNNER_TEMP/geo-smoke"
           if [ "$ARCH" = host ]; then
             timeout 90s "$RUNNER_TEMP/geo-smoke" "$RUNNER_TEMP/geo-fixture" "$RUNNER_TEMP/geo-runtime.img"
