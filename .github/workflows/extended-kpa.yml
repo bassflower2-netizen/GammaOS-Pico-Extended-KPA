@@ -85,6 +85,7 @@ jobs:
           test -s build-k85v1_64_kpa/emu/neo/geo_core_loader.o
           test -s build-k85v1_64_kpa/emu/neo/geo_video.o
           test -s build-k85v1_64_kpa/emu/neo/geo_session.o
+          test -s build-k85v1_64_kpa/emu/neo/geo_lk_host.o
           test -s build-k85v1_64_kpa/emu/pce/pce_sd_run.o
           test -s build-k85v1_64_kpa/emu/pce/pce_sd_io.o
           cmp "$RUNNER_TEMP/pce-native/pce-fast-pico.blob" out/sdcard/cores/pce-fast-pico.blob
