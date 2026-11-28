@@ -3,6 +3,7 @@
 #define _GNU_SOURCE
 #include "../../emu/neo/geo_core_loader.h"
 #include "../../emu/neo/geo_video.h"
+#include "../../emu/neo/geo_session.h"
 #include "../../emu/gba/core_file.h"
 #include <assert.h>
 #include <stdio.h>
@@ -43,6 +44,11 @@ static void video(const void *p,uint32_t w,uint32_t h,uint32_t pitch)
 static uint32_t audio(const int16_t *p,uint32_t n)
 {if(n)assert(p);audio_frames+=n;return n;}
 static void av_log(const char *msg){fputs(msg,stderr);}
+static unsigned present_count,submitted,submitted_rate;
+static void present(const uint16_t *p,uint32_t w,uint32_t h)
+{assert(p==display&&w&&h&&w<=320&&h<=264);++present_count;}
+static void submit(const int16_t *p,uint32_t n,uint32_t rate)
+{assert(p&&n&&n<=4096);submitted+=n;submitted_rate=rate;}
 int main(int argc,char **argv)
 {
     assert(argc==2);
@@ -96,6 +102,28 @@ int main(int argc,char **argv)
     assert(!write_requests);
     printf("Geolith native flat runtime passed: %u video callbacks, %u stereo frames, %u byte state, %u sector reads\n",
            videos,audio_frames,state,reads);
+    /* Re-load the actual overlay through the firmware-facing session wrapper. */
+    const struct geo_session_memory mem={heap,heap_size,scratch,1024u*1024u,
+                                         display,sizeof display/sizeof display[0]};
+    const struct geo_session_output output={present,submit,av_log};
+    struct geo_session_memory overlap=mem;overlap.scratch=heap;
+    assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
+    overlap=mem;overlap.heap=slot;
+    assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
+    assert(geo_session_begin(&v,"/roms/neo/missing.neo",1,&mem,&host,&output)==-4);
+    assert(!geo_session_begin(&v,"/roms/neo/test.neo",1,&mem,&host,&output));
+    assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&mem,&host,&output)==-1);
+    assert(!geo_session_timing(&fps,&rate)&&fps==59599&&rate==55943);
+    for(unsigned k=0;k<8;k++)assert(!geo_session_frame(0,0));
+    assert(present_count==8&&submitted>0&&submitted_rate==rate);
+    assert(geo_session_save(-1)==-1&&geo_session_save(0)==-1);
+    assert(geo_session_load(0)==-3);
+    assert(!geo_session_reset());
+    geo_session_end();geo_session_end();
+    assert(geo_session_frame(0,0)==-1&&geo_session_timing(&fps,&rate)==-1);
+    assert(!write_requests);
+    printf("GammaOS Neo Geo session passed: %u displayed frames, %u audio frames at %u Hz\n",
+           present_count,submitted,submitted_rate);
     assert(!fclose(disk));free(scratch);
     assert(!munmap(heap,heap_size));assert(!munmap(slot,GEO_BLOB_SLOT_SIZE));
     return 0;

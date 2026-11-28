@@ -190,7 +190,7 @@ jobs:
           mcopy -i "$RUNNER_TEMP/geo-flat.img" "$RUNNER_TEMP/geo-flat-fixture/test.neo" ::/roms/neo/
           mcopy -i "$RUNNER_TEMP/geo-flat.img" "$RUNNER_TEMP/geo-flat-fixture/aes.zip" "$RUNNER_TEMP/geo-flat-fixture/neogeo.zip" ::/bios/
           rm -r "$RUNNER_TEMP/geo-flat-fixture"
-          arm-linux-gnueabi-gcc -march=armv7-a -mfloat-abi=soft -marm -static -O2 -Wall -Wextra -Werror -fno-builtin -DCORE_FILE_USER_TEST cores/geolith-pico/flat_runtime_test.c emu/neo/geo_core_loader.c emu/neo/geo_video.c emu/gba/{core_file,fat_ro,fat_exfat}.c -o "$RUNNER_TEMP/geo-flat-test"
+          arm-linux-gnueabi-gcc -march=armv7-a -mfloat-abi=soft -marm -static -O2 -Wall -Wextra -Werror -fno-builtin -DCORE_FILE_USER_TEST cores/geolith-pico/flat_runtime_test.c emu/neo/geo_core_loader.c emu/neo/geo_video.c emu/neo/geo_session.c emu/gba/{core_file,fat_ro,fat_exfat}.c -o "$RUNNER_TEMP/geo-flat-test"
           timeout 180s qemu-arm "$RUNNER_TEMP/geo-flat-test" "$RUNNER_TEMP/geo-flat.img"
       - name: Execute real newlib allocator on ARM Linux syscall harness
         run: |
