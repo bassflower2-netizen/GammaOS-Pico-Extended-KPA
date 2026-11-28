@@ -10,6 +10,8 @@
 struct geo_file { fat_file file; uint32_t pos; int used; };
 static struct geo_file files[GEO_FILE_COUNT];
 static fat_vol *volume;
+static geo_native_log_sink log_sink;
+static void *log_context;
 void geo_native_file_bind(fat_vol *v)
 {
     memset(files,0,sizeof files);
@@ -72,6 +74,11 @@ off_t geo_native_seek(int fd,off_t offset,int whence)
 }
 int geo_native_fstat(int fd,struct stat *st)
 {
+    if((fd==1||fd==2)&&log_sink){
+        if(!st){errno=EFAULT;return -1;}
+        memset(st,0,sizeof *st);st->st_mode=S_IFCHR|0200;st->st_nlink=1;
+        return 0;
+    }
     struct geo_file *f=lookup(fd);
     if(!f)return -1;
     if(!st){errno=EFAULT;return -1;}
@@ -104,7 +111,39 @@ int geo_native_stat(const char *path,struct stat *st)
     result.st_nlink=1;
     *st=result;return 0;
 }
+void geo_native_console_bind(geo_native_log_sink sink,void *ctx)
+{
+    log_sink=sink;log_context=sink?ctx:NULL;
+}
+ssize_t geo_native_write(int fd,const void *buf,size_t count)
+{
+    if(fd!=1&&fd!=2){
+        if(!lookup(fd))return -1;
+        errno=EROFS;return -1;
+    }
+    if(!log_sink){errno=ENODEV;return -1;}
+    if(!count)return 0;
+    if(!buf){errno=EFAULT;return -1;}
+    if(count>INT32_MAX){errno=EOVERFLOW;return -1;}
+    ssize_t accepted=log_sink(log_context,fd,buf,count);
+    if(accepted<0 || (size_t)accepted>count){errno=EIO;return -1;}
+    return accepted;
+}
+int geo_native_isatty(int fd)
+{
+    if((fd==1||fd==2)&&log_sink){errno=ENOTTY;return 0;}
+    if(lookup(fd))errno=ENOTTY;
+    return 0;
+}
+int geo_native_truncate(int fd,off_t length)
+{
+    if(!lookup(fd))return -1;
+    if(length<0){errno=EINVAL;return -1;}
+    errno=EROFS;return -1;
+}
+int geo_native_mutation_denied(void){errno=EROFS;return -1;}
 #ifdef GEO_NEWLIB_SYSCALLS
+#include "native_include/utime.h"
 int _open(const char *path,int flags,int mode)
 {(void)mode;return geo_native_open(path,flags);}
 int _close(int fd){return geo_native_close(fd);}
@@ -112,4 +151,14 @@ ssize_t _read(int fd,void *buf,size_t count){return geo_native_read(fd,buf,count
 off_t _lseek(int fd,off_t offset,int whence){return geo_native_seek(fd,offset,whence);}
 int _fstat(int fd,struct stat *st){return geo_native_fstat(fd,st);}
 int _stat(const char *path,struct stat *st){return geo_native_stat(path,st);}
+ssize_t _write(int fd,const void *buf,size_t count){return geo_native_write(fd,buf,count);}
+int _isatty(int fd){return geo_native_isatty(fd);}
+int ftruncate(int fd,off_t length){return geo_native_truncate(fd,length);}
+int _link(const char *oldpath,const char *newpath)
+{(void)oldpath;(void)newpath;return geo_native_mutation_denied();}
+int _unlink(const char *path){(void)path;return geo_native_mutation_denied();}
+int mkdir(const char *path,mode_t mode)
+{(void)path;(void)mode;return geo_native_mutation_denied();}
+int utime(const char *path,const struct utimbuf *times)
+{(void)path;(void)times;return geo_native_mutation_denied();}
 #endif

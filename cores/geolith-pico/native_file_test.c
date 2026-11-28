@@ -11,11 +11,39 @@ static unsigned rd(void *ctx,uint32_t lba,uint32_t n,void *p)
     if(d->fail || fseek(d->fp,(long)lba*512,SEEK_SET))return 0;
     return (unsigned)fread(p,512,n,d->fp);
 }
+struct log_capture {char bytes[16];size_t used;int fd;int result;};
+static ssize_t capture(void *ctx,int fd,const void *buf,size_t count)
+{
+    struct log_capture *l=ctx;l->fd=fd;
+    if(l->result<0)return -1;
+    if(l->result==2)return (ssize_t)count+1;
+    size_t n=l->result==1?count/2:count;
+    assert(n<=sizeof l->bytes-l->used);
+    memcpy(l->bytes+l->used,buf,n);l->used+=n;return (ssize_t)n;
+}
 int main(int argc,char **argv)
 {
     assert(argc==2);
     const char *path="/roms/neo/Test Cart.NEO";
     struct stat meta;
+    struct log_capture log={{0},0,0,0};
+    assert(geo_native_write(1,"x",1)==-1 && errno==ENODEV);
+    geo_native_console_bind(capture,&log);
+    assert(!geo_native_fstat(1,&meta) && S_ISCHR(meta.st_mode));
+    assert(geo_native_isatty(2)==0 && errno==ENOTTY);
+    assert(geo_native_write(1,"abc",3)==3 && log.fd==1);
+    assert(geo_native_write(2,"def",3)==3 && log.fd==2);
+    log.result=1;assert(geo_native_write(2,"ghij",4)==2);
+    assert(log.used==8 && !memcmp(log.bytes,"abcdefgh",8));
+    log.result=-1;assert(geo_native_write(2,"x",1)==-1 && errno==EIO);
+    log.result=2;assert(geo_native_write(2,"x",1)==-1 && errno==EIO);
+    assert(geo_native_write(2,NULL,1)==-1 && errno==EFAULT);
+    assert(geo_native_write(2,NULL,0)==0);
+    assert(geo_native_write(2,"x",(size_t)INT32_MAX+1u)==-1 && errno==EOVERFLOW);
+    assert(geo_native_write(99,"x",1)==-1 && errno==EBADF);
+    geo_native_console_bind(NULL,NULL);
+    assert(geo_native_write(2,"x",1)==-1 && errno==ENODEV);
+    assert(geo_native_mutation_denied()==-1 && errno==EROFS);
     assert(geo_native_stat(path,&meta)==-1 && errno==ENODEV);
     assert(geo_native_open(path,O_RDONLY)==-1 && errno==ENODEV);
     struct disk d={fopen(argv[1],"rb"),0};assert(d.fp);
@@ -26,6 +54,10 @@ int main(int argc,char **argv)
     assert(geo_native_open(path,O_RDONLY|O_CREAT)==-1 && errno==EROFS);
     int fd[8];for(int i=0;i<8;i++){fd[i]=geo_native_open(path,O_RDONLY);assert(fd[i]>=3);}
     assert(geo_native_open(path,O_RDONLY)==-1 && errno==EMFILE);
+    assert(geo_native_write(fd[0],"x",1)==-1 && errno==EROFS);
+    assert(geo_native_truncate(fd[0],0)==-1 && errno==EROFS);
+    assert(geo_native_truncate(fd[0],-1)==-1 && errno==EINVAL);
+    assert(geo_native_isatty(fd[0])==0 && errno==ENOTTY);
     unsigned char buf[32];struct stat st;
     assert(!geo_native_fstat(fd[0],&st) && S_ISREG(st.st_mode) && st.st_size>4096);
     /* Path lookup does not consume descriptors, even with a full table. */
