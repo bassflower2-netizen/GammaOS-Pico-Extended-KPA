@@ -1,4 +1,4 @@
-/* Native Geolith ABI 1: validate exact file bounds and the export table. */
+/* Native Geolith ABI 2: validate exact file bounds and the export table. */
 #include "geo_core_loader.h"
 #include "../gba/core_file.h"
 static int check(fat_vol *v,uint32_t h[5])
@@ -38,7 +38,8 @@ const struct geo_blob_exports *geo_core_load(fat_vol *v,int *error)
                    !code_pointer((uintptr_t)api->reset,end)||
                    !code_pointer((uintptr_t)api->state_size,end)||
                    !code_pointer((uintptr_t)api->save,end)||
-                   !code_pointer((uintptr_t)api->load,end))e=CORE_FILE_REJECTED;
+                   !code_pointer((uintptr_t)api->load,end)||
+                   !code_pointer((uintptr_t)api->timing,end))e=CORE_FILE_REJECTED;
             }
         }
     }

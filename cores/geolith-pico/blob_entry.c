@@ -52,7 +52,8 @@ static int32_t reset(void){return geo_device_reset();}
 static uint32_t state_size(void){return (uint32_t)geo_device_state_size();}
 static int32_t save(int32_t slot,void *p,uint32_t n){return geo_device_save(slot,p,n);}
 static int32_t load(int32_t slot,void *p,uint32_t n){return geo_device_load(slot,p,n);}
+static int32_t timing(uint32_t *fps,uint32_t *rate){return geo_pico_timing(fps,rate);}
 static const struct geo_blob_exports api={
-    GEO_BLOB_MAGIC,GEO_BLOB_VERSION,sizeof api,init,open,close,frame,reset,state_size,save,load
+    GEO_BLOB_MAGIC,GEO_BLOB_VERSION,sizeof api,init,open,close,frame,reset,state_size,save,load,timing
 };
 const struct geo_blob_exports *geo_blob_entry(void){return &api;}

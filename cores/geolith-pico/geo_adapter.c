@@ -97,3 +97,14 @@ int geo_pico_save(void *p,size_t n)
 {return active&&p&&n&&n==geo_pico_state_size()&&retro_serialize(p,n)?0:-1;}
 int geo_pico_load(const void *p,size_t n)
 {return active&&p&&n&&n==geo_pico_state_size()&&retro_unserialize(p,n)?0:-1;}
+
+int geo_pico_timing(uint32_t *fps_milli,uint32_t *sample_rate)
+{
+    if(!active||!fps_milli||!sample_rate)return -1;
+    struct retro_system_av_info info={0};retro_get_system_av_info(&info);
+    double fps=info.timing.fps,rate=info.timing.sample_rate;
+    if(!(fps>=20.0&&fps<=120.0&&rate>=8000.0&&rate<=192000.0))return -2;
+    *fps_milli=(uint32_t)(fps*1000.0+0.5);
+    *sample_rate=(uint32_t)(rate+0.5);
+    return 0;
+}

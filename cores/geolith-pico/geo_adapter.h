@@ -18,4 +18,6 @@ int geo_pico_reset(void);
 size_t geo_pico_state_size(void);
 int geo_pico_save(void *,size_t);
 int geo_pico_load(const void *,size_t);
+/* Active engine timing, rounded to integer millihertz / hertz. */
+int geo_pico_timing(uint32_t *fps_milli,uint32_t *sample_rate);
 #endif

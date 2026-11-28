@@ -352,7 +352,7 @@ subprocess.run(["arm-none-eabi-objcopy", "-O", "binary", str(blob_elf), str(blob
 import struct
 data = blob.read_bytes()
 magic, version, entry, load, span = struct.unpack_from("<5I", data)
-assert magic == 0x314f4547 and version == 1
+assert magic == 0x314f4547 and version == 2
 assert 20 <= entry < load == len(data) <= span <= 0x1000000 and entry % 4 == 0
 (out / "blob-layout.txt").write_text(
     f"Geolith ABI {version}: load {load}, span {span}, entry +0x{entry:x}\\n".replace("\\n", "\n"))

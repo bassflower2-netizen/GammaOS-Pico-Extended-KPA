@@ -2,7 +2,7 @@
 #define GEO_BLOB_ABI_H
 #include <stdint.h>
 #define GEO_BLOB_MAGIC 0x314f4547u /* GEO1 */
-#define GEO_BLOB_VERSION 1u
+#define GEO_BLOB_VERSION 2u
 #define GEO_BLOB_VMA 0x4F000000u
 #define GEO_BLOB_SLOT_SIZE 0x01000000u
 /* ARM32 soft-float ABI. All sizes and return codes at the boundary are fixed
@@ -34,6 +34,7 @@ struct geo_blob_exports {
     uint32_t (*state_size)(void);
     int32_t (*save)(int32_t,void *,uint32_t);
     int32_t (*load)(int32_t,void *,uint32_t);
+    int32_t (*timing)(uint32_t *fps_milli,uint32_t *sample_rate);
 };
 typedef const struct geo_blob_exports *(*geo_blob_entry_fn)(void);
 #endif

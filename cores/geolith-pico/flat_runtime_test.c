@@ -2,6 +2,7 @@
  * newlib, using a real read-only FAT image. No Linux code enters the blob. */
 #define _GNU_SOURCE
 #include "../../emu/neo/geo_core_loader.h"
+#include "../../emu/neo/geo_video.h"
 #include "../../emu/gba/core_file.h"
 #include <assert.h>
 #include <stdio.h>
@@ -11,6 +12,7 @@
 #include <stdint.h>
 #include <time.h>
 static unsigned videos,audio_frames,reads,write_requests;
+static uint16_t display[GEO_VIDEO_MAX_W*GEO_VIDEO_MAX_H];
 static unsigned rd(void *ctx,uint32_t lba,uint32_t n,void *p)
 {
     FILE *disk=ctx;
@@ -37,13 +39,21 @@ static int32_t reject_put(void *v,const char *d,const char *n,const void *p,uint
 static int32_t reject_mkpath(void *v,const char *p)
 {(void)v;(void)p;++write_requests;return -1;}
 static void video(const void *p,uint32_t w,uint32_t h,uint32_t pitch)
-{assert(w&&h&&w<=320&&h<=264);if(p)assert(pitch>=w*4u);++videos;}
+{assert(geo_video_rgb565(display,sizeof display/sizeof display[0],p,w,h,pitch)==(p?0:1));++videos;}
 static uint32_t audio(const int16_t *p,uint32_t n)
 {if(n)assert(p);audio_frames+=n;return n;}
 static void av_log(const char *msg){fputs(msg,stderr);}
 int main(int argc,char **argv)
 {
     assert(argc==2);
+    const unsigned char colors[]={0,0,255,0,0,255,0,0,9,9,9,9,255,0,0,0,255,255,255,0,9,9,9,9};
+    uint16_t pixels[5]={0,0,0,0,0x1234};
+    assert(!geo_video_rgb565(pixels,4,colors,2,2,12));
+    assert(pixels[0]==0xf800&&pixels[1]==0x07e0&&pixels[2]==0x001f&&pixels[3]==0xffff&&pixels[4]==0x1234);
+    assert(geo_video_rgb565(pixels,4,NULL,2,2,0)==1&&pixels[0]==0xf800);
+    assert(geo_video_rgb565(pixels,3,colors,2,2,12)==-1);
+    assert(geo_video_rgb565(pixels,4,colors,2,2,7)==-1);
+    assert(geo_video_rgb565(pixels,4,colors,321,1,1284)==-1);
     FILE *disk=fopen(argv[1],"rb");assert(disk);
     fat_vol v;assert(!fat_mount(&v,rd,disk));
     assert(geo_core_check(NULL)==CORE_FILE_NO_CARD);
@@ -69,6 +79,9 @@ int main(int argc,char **argv)
     int rc=api->open(&v,"/roms/neo/test.neo",1,scratch,1024u*1024u,&av);
     fprintf(stderr,"Native flat open returned %d, %u sector read calls\n",rc,reads);
     assert(!rc);
+    uint32_t fps=0,rate=0;
+    assert(!api->timing(&fps,&rate)&&fps>=20000&&fps<=120000&&rate>=8000&&rate<=192000);
+    printf("Geolith native timing: %u millihertz, %u Hz audio\n",fps,rate);
     assert(api->open(&v,"/roms/neo/test.neo",1,scratch,1024u*1024u,&av)==-1);
     for(unsigned i=0;i<8;i++)assert(!api->frame(0,0));
     assert(videos>=8&&audio_frames>0);
@@ -78,6 +91,7 @@ int main(int argc,char **argv)
     assert(api->load(0,scratch,1024u*1024u)==-3); /* absent slot */
     assert(!api->frame(0,0));
     api->close();api->close();
+    assert(api->timing(&fps,&rate)==-1);
     assert(api->frame(0,0)==-1&&!api->state_size());
     assert(!write_requests);
     printf("Geolith native flat runtime passed: %u video callbacks, %u stereo frames, %u byte state, %u sector reads\n",
