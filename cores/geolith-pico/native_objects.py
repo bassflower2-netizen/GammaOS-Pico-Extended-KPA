@@ -313,3 +313,22 @@ kernel = {"mutex_init", "mutex_acquire", "mutex_release", "critical_section_coun
 assert strong == kernel, (strong - kernel, kernel - strong)
 (out / "platform-imports.txt").write_text(platform_imports)
 print("Native Geolith platform link complete except real LK kernel imports:", platform_imports)
+
+device_session = out / "device_session.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-std=c11", "-Wall", "-Wextra",
+                "-Werror", "-ffreestanding", "-c", str(root / "device_session.c"),
+                "-o", str(device_session)], check=True)
+device_linked = out / "geolith-device-linked.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-nostdlib", "-Wl,-r",
+                "-o", str(device_linked), str(platform_linked), str(device_session),
+                "-Wl,--start-group", "-lc", "-lm", "-lgcc", "-Wl,--end-group"], check=True)
+device_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(device_linked)], text=True)
+device_strong = {line.split()[-1] for line in device_imports.splitlines()
+                 if line.split() and line.split()[-2:-1] == ["U"]}
+assert device_strong == kernel, (device_strong - kernel, kernel - device_strong)
+device_defined = {line.split()[-1] for line in subprocess.check_output(
+    ["arm-none-eabi-nm", "--defined-only", str(device_linked)], text=True).splitlines() if line.strip()}
+assert {"geo_device_init", "geo_device_open", "geo_device_close", "geo_device_frame",
+        "geo_device_reset", "geo_device_save", "geo_device_load"} <= device_defined
+(out / "device-imports.txt").write_text(device_imports)
+print("Native device session linked; only LK kernel imports remain")

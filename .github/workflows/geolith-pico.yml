@@ -196,6 +196,7 @@ jobs:
             ${{ runner.temp }}/geolith-native/controller-imports.txt
             ${{ runner.temp }}/geolith-native/frontend-imports.txt
             ${{ runner.temp }}/geolith-native/platform-imports.txt
+            ${{ runner.temp }}/geolith-native/device-imports.txt
             ${{ runner.temp }}/geolith-native/newlib-allocator-imports.txt
           if-no-files-found: error
 

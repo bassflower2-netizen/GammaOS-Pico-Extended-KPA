@@ -9,6 +9,7 @@ trap 'rm -rf "$W"' EXIT
 # Writer uses LK kernel locks on ARM; execute real FAT writes on the host only.
 if [[ "${GEO_TEST_ARM:-0}" != 1 ]]; then
     "${CC:-cc}" ${CFLAGS:-} -O2 -Wall -Wextra cores/geolith-pico/{sd_save,sd_save_test}.c emu/gba/{fat_ro,fat_wr,fat_exfat}.c -o "$W/save-test"
+    "${CC:-cc}" ${CFLAGS:-} -O2 -Wall -Wextra cores/geolith-pico/{device_session,device_session_test,native_heap,arena,native_platform,native_file,native_dir,neo_format,sd_save}.c emu/gba/{fat_ro,fat_wr,fat_exfat}.c -o "$W/device-test"
 fi
 python3 - "$W" <<'PY'
 import pathlib,struct,sys
@@ -37,5 +38,6 @@ for bits in 16 32; do
         "$W/dir-test" "$img"
         "$W/file-test" "$img"
         "$W/save-test" "$img"
+        "$W/device-test" "$img"
     fi
 done
