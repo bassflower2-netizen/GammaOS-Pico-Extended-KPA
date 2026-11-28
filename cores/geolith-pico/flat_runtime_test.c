@@ -110,6 +110,13 @@ int main(int argc,char **argv)
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
     overlap=mem;overlap.heap=slot;
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
+    /* Invalid addresses are never dereferenced: rejection precedes core load. */
+    overlap=mem;overlap.heap=(void *)((uintptr_t)-1 & ~(uintptr_t)15u);
+    assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
+    overlap=mem;overlap.video_pixels=0x80000000u;
+    assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
+    overlap=mem;overlap.scratch=(void *)((uintptr_t)-1 & ~(uintptr_t)3u);
+    assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
     assert(geo_session_begin(&v,"/roms/neo/missing.neo",1,&mem,&host,&output)==-4);
     assert(!geo_session_begin(&v,"/roms/neo/test.neo",1,&mem,&host,&output));
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&mem,&host,&output)==-1);

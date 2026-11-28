@@ -179,6 +179,9 @@ jobs:
           fi
       - name: Compile native engine and inventory unresolved imports
         run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native" "$RUNNER_TEMP/zlib-native"
+      - name: Check Neo Geo session against LK private C headers
+        run: |
+          arm-none-eabi-gcc -march=armv7-a -mfloat-abi=soft -marm -std=gnu99 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Iinclude -c emu/neo/geo_session.c -o "$RUNNER_TEMP/geo-session-lk.o"
       - name: Execute actual flat Geolith overlay from synthetic FAT image
         run: |
           set -eu

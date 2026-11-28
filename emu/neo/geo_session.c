@@ -5,15 +5,17 @@ static struct geo_session_memory mem;
 static struct geo_session_output out;
 static uint32_t width,height,fps,rate;
 static int busy,active,bad;
+/* LK's private stdint.h supplies the unsigned types but not C99 limit
+ * macros. Derive their maxima from the types, including on host builds. */
 static int range(uintptr_t p,uint32_t n)
-{return p&&n&&n<=UINTPTR_MAX-p;}
+{return p&&n&&n<=(uintptr_t)-1-p;}
 static int apart(uintptr_t a,uint32_t an,uintptr_t b,uint32_t bn)
 {return range(a,an)&&range(b,bn)&&(a+an<=b||b+bn<=a);}
 static int memory_ok(const struct geo_session_memory *m)
 {
     if(!m||m->heap_size<4096u||m->scratch_size<4096u||
        m->video_pixels<GEO_VIDEO_MAX_W*GEO_VIDEO_MAX_H||
-       m->video_pixels>UINT32_MAX/2u)return 0;
+       m->video_pixels>((uint32_t)-1)/2u)return 0;
     uintptr_t a=(uintptr_t)m->heap,b=(uintptr_t)m->scratch,c=(uintptr_t)m->video;
     uint32_t n=m->video_pixels*2u;
     return !(a&15u)&&!(b&3u)&&!(c&1u)&&
