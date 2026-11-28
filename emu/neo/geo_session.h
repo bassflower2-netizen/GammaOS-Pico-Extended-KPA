@@ -5,6 +5,8 @@
 /* Caller owns the shared overlay and all three disjoint buffers exclusively
  * until end() returns. All calls and synchronous callbacks on one thread.
  * No allocation or automatic selection of physical addresses here. */
+#define GEO_SESSION_HEAP_MIN (64u*1024u*1024u)
+#define GEO_SESSION_SCRATCH_MIN (4u*1024u*1024u)
 struct geo_session_memory {
     void *heap; uint32_t heap_size;
     void *scratch; uint32_t scratch_size;

@@ -122,6 +122,10 @@ int main(int argc,char **argv)
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
     overlap=mem;overlap.heap=slot;
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
+    overlap=mem;overlap.heap_size=GEO_SESSION_HEAP_MIN-1u;
+    assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
+    overlap=mem;overlap.scratch_size=GEO_SESSION_SCRATCH_MIN-1u;
+    assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
     /* Invalid addresses are never dereferenced: rejection precedes core load. */
     overlap=mem;overlap.heap=(void *)((uintptr_t)-1 & ~(uintptr_t)15u);
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);

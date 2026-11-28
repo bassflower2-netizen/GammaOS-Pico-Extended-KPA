@@ -13,7 +13,7 @@ static int apart(uintptr_t a,uint32_t an,uintptr_t b,uint32_t bn)
 {return range(a,an)&&range(b,bn)&&(a+an<=b||b+bn<=a);}
 static int memory_ok(const struct geo_session_memory *m)
 {
-    if(!m||m->heap_size<4096u||m->scratch_size<4096u||
+    if(!m||m->heap_size<GEO_SESSION_HEAP_MIN||m->scratch_size<GEO_SESSION_SCRATCH_MIN||
        m->video_pixels<GEO_VIDEO_MAX_W*GEO_VIDEO_MAX_H||
        m->video_pixels>((uint32_t)-1)/2u)return 0;
     uintptr_t a=(uintptr_t)m->heap,b=(uintptr_t)m->scratch,c=(uintptr_t)m->video;
@@ -26,11 +26,11 @@ static int memory_ok(const struct geo_session_memory *m)
 }
 int geo_session_partition(void *arena,uint32_t bytes,struct geo_session_memory *result)
 {
-    const uint32_t scratch=4u*1024u*1024u;
+    const uint32_t scratch=GEO_SESSION_SCRATCH_MIN;
     const uint32_t pixels=GEO_VIDEO_MAX_W*GEO_VIDEO_MAX_H;
     const uint32_t overhead=scratch+pixels*2u;
     uintptr_t base=(uintptr_t)arena;
-    if(!result||busy||(base&15u)||bytes<overhead+64u*1024u*1024u||
+    if(!result||busy||(base&15u)||bytes<overhead+GEO_SESSION_HEAP_MIN||
        !apart(base,bytes,GEO_BLOB_VMA,GEO_BLOB_SLOT_SIZE))return -1;
     uint32_t heap=(bytes-overhead)&~15u;
     struct geo_session_memory m={arena,heap,(void *)(base+heap),scratch,
