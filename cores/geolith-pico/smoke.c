@@ -6,41 +6,18 @@
 #ifdef GEO_RUNTIME_FAT_SAVE
 #include "sd_save.h"
 #endif
-#include "libretro.h"
+#include "geo_adapter.h"
 #include <assert.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 static const char *dir;
 static unsigned videos,frames;
-static void logline(enum retro_log_level level,const char *fmt,...){
-    (void)level;va_list args;va_start(args,fmt);vfprintf(stderr,fmt,args);va_end(args);
-}
-static bool env(unsigned cmd,void *data)
-{
-    switch(cmd){
-    case RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
-        ((struct retro_log_callback *)data)->log=logline;return true;
-    case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
-    case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
-        *(const char **)data=dir;return true;
-    case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
-        return *(enum retro_pixel_format *)data==RETRO_PIXEL_FORMAT_XRGB8888;
-    case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
-        *(bool *)data=false;return true;
-    case RETRO_ENVIRONMENT_GET_INPUT_BITMASKS:return true;
-    default:return false;
-    }
-}
+static void logline(const char *msg){fputs(msg,stderr);}
 static void video(const void *p,unsigned w,unsigned h,size_t pitch)
 {assert(w&&h&&w<=320&&h<=264);if(p)assert(pitch>=w*4u);++videos;}
 static size_t audio(const int16_t *p,size_t n)
 {if(n)assert(p);frames+=(unsigned)n;return n;}
-static void sample(int16_t l,int16_t r){int16_t a[]={l,r};audio(a,1);}
-static void poll(void){}
-static int16_t input(unsigned p,unsigned d,unsigned i,unsigned id)
-{(void)p;(void)d;(void)i;(void)id;return 0;}
 /* Host-only fullpath adapter: load the fixture from FAT, not the original
  * host cartridge. Native memory handoff remains a separate porting step. */
 static unsigned disk_read(void *ctx,uint32_t lba,uint32_t n,void *p)
@@ -156,34 +133,32 @@ int main(int argc,char **argv)
     uint64_t key=geo_cart_key(rom,(size_t)size);
     assert(key==geo_cart_key(rom,(size_t)size));
     free(rom);
-    retro_set_environment(env);
-    retro_set_video_refresh(video);
-    retro_set_audio_sample(sample);
-    retro_set_audio_sample_batch(audio);
-    retro_set_input_poll(poll);
-    retro_set_input_state(input);
-    retro_init();
-    struct retro_system_info si={0};
-    retro_get_system_info(&si);assert(si.need_fullpath&&strstr(si.valid_extensions,"neo"));
-    struct retro_game_info game={path,NULL,0,NULL};
-    assert(retro_load_game(&game));
-    for(unsigned i=0;i<8;i++)retro_run();
+    const geo_pico_callbacks callbacks={video,audio,logline};
+    assert(geo_pico_frame(0,0)==-1 && geo_pico_state_size()==0);
+    assert(geo_pico_open(path,dir,dir,NULL)==-1);
+    assert(!geo_pico_open(path,dir,dir,&callbacks));
+    assert(geo_pico_open(path,dir,dir,&callbacks)==-1);
+    for(unsigned i=0;i<8;i++)assert(!geo_pico_frame(0,0));
     assert(videos>=8&&frames>0);
-    size_t n=retro_serialize_size();assert(n>65536&&n<16u*1024u*1024u);
+    size_t n=geo_pico_state_size();assert(n>65536&&n<16u*1024u*1024u);
     void *state=malloc(n);assert(state);
-    assert(retro_serialize(state,n));
-    retro_run();
+    assert(geo_pico_save(state,n-1)==-1);
+    assert(!geo_pico_save(state,n));
+    assert(!geo_pico_frame(0,0));
 #ifdef GEO_RUNTIME_FAT_SAVE
     void *restored=malloc(n);assert(restored);
     state_roundtrip(argv[2],key,state,restored,(uint32_t)n);
-    assert(retro_unserialize(restored,n));
+    assert(!geo_pico_load(restored,n));
     free(restored);
 #else
     (void)key;
-    assert(retro_unserialize(state,n));
+    assert(!geo_pico_load(state,n));
 #endif
-    retro_run();free(state);
-    retro_unload_game();retro_deinit();
+    assert(geo_pico_load(state,n-1)==-1);
+    assert(!geo_pico_frame(0,0));free(state);
+    geo_pico_close();geo_pico_close();
+    assert(geo_pico_frame(0,0)==-1 && geo_pico_state_size()==0);
+    puts("Geolith frontend lifecycle passed");
     printf("Geolith synthetic cartridge: %u video callbacks, %u stereo frames, %lu byte state\n",videos,frames,(unsigned long)n);
     return 0;
 }

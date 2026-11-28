@@ -104,7 +104,7 @@ jobs:
             SAVE_SOURCES="cores/geolith-pico/sd_save.c emu/gba/fat_wr.c"
           fi
           "$CC" $FLAGS $SAVE_FLAGS -std=c99 -Wall -Wextra -Igeo-upstream/libretro \
-            cores/geolith-pico/{neo_format,smoke,sd_cart,cart_io,geo_zlib}.c emu/gba/{fat_ro,fat_exfat}.c $SAVE_SOURCES \
+            cores/geolith-pico/{neo_format,smoke,sd_cart,cart_io,geo_zlib,geo_adapter}.c emu/gba/{fat_ro,fat_exfat}.c $SAVE_SOURCES \
             "$PWD/geo-upstream/libretro/geolith_libretro.so" -Wl,-rpath,"$PWD/geo-upstream/libretro" -lz -o "$RUNNER_TEMP/geo-smoke"
           if [ "$ARCH" = host ]; then
             timeout 90s "$RUNNER_TEMP/geo-smoke" "$RUNNER_TEMP/geo-fixture" "$RUNNER_TEMP/geo-runtime.img"
@@ -187,6 +187,7 @@ jobs:
             ${{ runner.temp }}/geolith-native/libc-imports.txt
             ${{ runner.temp }}/geolith-native/file-imports.txt
             ${{ runner.temp }}/geolith-native/writer-imports.txt
+            ${{ runner.temp }}/geolith-native/controller-imports.txt
             ${{ runner.temp }}/geolith-native/newlib-allocator-imports.txt
           if-no-files-found: error
 

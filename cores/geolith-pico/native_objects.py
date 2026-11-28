@@ -217,3 +217,25 @@ assert {"mutex_init", "mutex_acquire", "mutex_release", "critical_section_count"
         "arch_disable_ints", "arch_enable_ints"} <= writer_missing, writer_missing
 (out / "writer-imports.txt").write_text(writer_imports)
 print("Actual LK FAT writer linked with native Geolith; kernel synchronization imports preserved:", writer_imports)
+
+# Compile the portable session controller against the pinned libretro ABI.
+# The engine inventory excludes the upstream libretro frontend translation
+# unit; leave its entry points explicit until that unit is linked.
+adapter = out / "geo_adapter.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-std=c11", "-Wall", "-Wextra",
+                "-Werror", "-ffreestanding", "-I" + str(cwd),
+                "-c", str(root / "geo_adapter.c"), "-o", str(adapter)], check=True)
+controller = out / "geolith-controller-linked.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-nostdlib", "-Wl,-r", "-o",
+                str(controller), str(writer_linked), str(adapter),
+                "-Wl,--start-group", "-lc", "-lm", "-lgcc", "-Wl,--end-group"], check=True)
+controller_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(controller)], text=True)
+controller_missing = {line.split()[-1] for line in controller_imports.splitlines() if line.strip()}
+controller_defined = {line.split()[-1] for line in subprocess.check_output(
+    ["arm-none-eabi-nm", "--defined-only", str(controller)], text=True).splitlines() if line.strip()}
+assert {"geo_pico_open", "geo_pico_close", "geo_pico_frame", "geo_pico_reset",
+        "geo_pico_save", "geo_pico_load", "geo_pico_state_size"} <= controller_defined
+assert {"retro_init", "retro_load_game", "retro_run", "retro_serialize",
+        "retro_unserialize", "retro_unload_game"} <= controller_missing, controller_missing
+(out / "controller-imports.txt").write_text(controller_imports)
+print("Native Geolith session controller linked; libretro frontend imports explicit")
