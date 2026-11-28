@@ -10,4 +10,6 @@ int geo_native_close(int fd);
 ssize_t geo_native_read(int fd,void *buf,size_t count);
 off_t geo_native_seek(int fd,off_t offset,int whence);
 int geo_native_fstat(int fd,struct stat *st);
+/* Read-only metadata by absolute FAT path; timestamps unavailable. */
+int geo_native_stat(const char *path,struct stat *st);
 #endif

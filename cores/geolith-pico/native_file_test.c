@@ -15,6 +15,8 @@ int main(int argc,char **argv)
 {
     assert(argc==2);
     const char *path="/roms/neo/Test Cart.NEO";
+    struct stat meta;
+    assert(geo_native_stat(path,&meta)==-1 && errno==ENODEV);
     assert(geo_native_open(path,O_RDONLY)==-1 && errno==ENODEV);
     struct disk d={fopen(argv[1],"rb"),0};assert(d.fp);
     fat_vol v;assert(!fat_mount(&v,rd,&d));geo_native_file_bind(&v);
@@ -26,6 +28,19 @@ int main(int argc,char **argv)
     assert(geo_native_open(path,O_RDONLY)==-1 && errno==EMFILE);
     unsigned char buf[32];struct stat st;
     assert(!geo_native_fstat(fd[0],&st) && S_ISREG(st.st_mode) && st.st_size>4096);
+    /* Path lookup does not consume descriptors, even with a full table. */
+    assert(!geo_native_stat("/roms/NEO/test cart.neo",&meta));
+    assert(meta.st_mode==st.st_mode && meta.st_size==st.st_size && meta.st_nlink==1);
+    assert(!geo_native_stat("/",&meta) && S_ISDIR(meta.st_mode));
+    assert(!geo_native_stat("/roms/neo/",&meta) && S_ISDIR(meta.st_mode));
+    assert(!geo_native_stat("/bios/neogeo.zip",&meta) && S_ISREG(meta.st_mode) && meta.st_size>0);
+    assert(geo_native_stat("/missing",&meta)==-1 && errno==ENOENT && S_ISREG(meta.st_mode));
+    assert(geo_native_stat("relative",&meta)==-1 && errno==EINVAL);
+    assert(geo_native_stat(path,NULL)==-1 && errno==EFAULT);
+    char longpath[514];memset(longpath,'x',sizeof longpath);longpath[0]='/';longpath[513]=0;
+    assert(geo_native_stat(longpath,&meta)==-1 && errno==ENAMETOOLONG);
+    longpath[257]=0;
+    assert(geo_native_stat(longpath,&meta)==-1 && errno==ENAMETOOLONG);
     assert(geo_native_read(fd[0],buf,4)==4 && !memcmp(buf,"NEO\1",4));
     assert(geo_native_seek(fd[0],4096,SEEK_SET)==4096);
     assert(geo_native_read(fd[0],buf,sizeof buf)==sizeof buf);

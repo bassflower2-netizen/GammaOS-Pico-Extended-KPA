@@ -172,7 +172,7 @@ subprocess.run(["arm-none-eabi-gcc", *arch, "-nostdlib", "-Wl,-r",
                 "-Wl,--start-group", "-lc", "-lgcc", "-Wl,--end-group"], check=True)
 file_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(file_linked)], text=True)
 file_missing = {line.split()[-1] for line in file_imports.splitlines() if line.strip()}
-assert not {"_open", "_read", "_close", "_lseek", "_fstat"} & file_missing, file_missing
+assert not {"_open", "_read", "_close", "_lseek", "_fstat", "_stat"} & file_missing, file_missing
 assert {"_write", "utime"} <= file_missing, file_missing
 (out / "file-imports.txt").write_text(file_imports)
 print("Native FAT file adapter linked; remaining imports:", file_imports)
@@ -287,6 +287,7 @@ frontend_defined = {line.split()[-1] for line in subprocess.check_output(
 required_retro = {symbol for symbol in controller_missing if symbol.startswith("retro_")}
 assert required_retro and required_retro <= frontend_defined, required_retro - frontend_defined
 assert not any(s.startswith(("retro_", "geo_", "fat_", "exfat_")) for s in frontend_missing), frontend_missing
+assert "_stat" not in frontend_missing and "_stat" in frontend_defined
 assert {"geo_pico_open", "geo_pico_frame", "geo_pico_save", "retro_init",
         "retro_load_game", "retro_run", "retro_unserialize"} <= frontend_defined
 assert {"mutex_acquire", "mutex_release", "arch_disable_ints", "arch_enable_ints"} <= frontend_missing

@@ -79,6 +79,31 @@ int geo_native_fstat(int fd,struct stat *st)
     st->st_mode=S_IFREG|0444;st->st_size=(off_t)f->file.size;st->st_nlink=1;
     return 0;
 }
+/* The FAT reader cannot distinguish all directory I/O failures from
+ * missing entries; preserve its limitation rather than invent timestamps. */
+int geo_native_stat(const char *path,struct stat *st)
+{
+    if(!volume || !volume->mounted){errno=ENODEV;return -1;}
+    if(!path || path[0]!='/'){errno=EINVAL;return -1;}
+    if(!st){errno=EFAULT;return -1;}
+    size_t n=strlen(path);
+    if(n>=512){errno=ENAMETOOLONG;return -1;}
+    size_t component=0;
+    for(size_t i=0;i<n;i++){
+        if(path[i]=='/')component=0;
+        else if(++component>255){errno=ENAMETOOLONG;return -1;}
+    }
+    fat_file file;fat_dir dir;
+    struct stat result;memset(&result,0,sizeof result);
+    if(!fat_open(volume,path,&file)){
+        if(file.size>INT32_MAX){errno=EOVERFLOW;return -1;}
+        result.st_mode=S_IFREG|0444;result.st_size=(off_t)file.size;
+    }else if(!fat_opendir(volume,path,&dir)){
+        result.st_mode=S_IFDIR|0555;
+    }else{errno=ENOENT;return -1;}
+    result.st_nlink=1;
+    *st=result;return 0;
+}
 #ifdef GEO_NEWLIB_SYSCALLS
 int _open(const char *path,int flags,int mode)
 {(void)mode;return geo_native_open(path,flags);}
@@ -86,4 +111,5 @@ int _close(int fd){return geo_native_close(fd);}
 ssize_t _read(int fd,void *buf,size_t count){return geo_native_read(fd,buf,count);}
 off_t _lseek(int fd,off_t offset,int whence){return geo_native_seek(fd,offset,whence);}
 int _fstat(int fd,struct stat *st){return geo_native_fstat(fd,st);}
+int _stat(const char *path,struct stat *st){return geo_native_stat(path,st);}
 #endif
