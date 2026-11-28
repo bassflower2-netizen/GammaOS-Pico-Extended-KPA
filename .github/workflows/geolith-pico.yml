@@ -88,6 +88,12 @@ jobs:
           else
             qemu-arm -L /usr/arm-linux-gnueabi "$RUNNER_TEMP/geo-cart-test"
           fi
+          "$CC" $FLAGS -std=c11 -Wall -Wextra -Werror cores/geolith-pico/native_platform.c cores/geolith-pico/native_platform_test.c -o "$RUNNER_TEMP/geo-platform-test"
+          if [ "$ARCH" = host ]; then
+            "$RUNNER_TEMP/geo-platform-test"
+          else
+            timeout 30s qemu-arm -L /usr/arm-linux-gnueabi "$RUNNER_TEMP/geo-platform-test"
+          fi
           make -C geo-upstream/libretro -j2 platform=unix CC="$CC" EXTRA_INCLUDES="$FLAGS"
           python3 cores/geolith-pico/fixture.py "$RUNNER_TEMP/geo-fixture"
           truncate -s 64M "$RUNNER_TEMP/geo-runtime.img"
@@ -189,6 +195,7 @@ jobs:
             ${{ runner.temp }}/geolith-native/writer-imports.txt
             ${{ runner.temp }}/geolith-native/controller-imports.txt
             ${{ runner.temp }}/geolith-native/frontend-imports.txt
+            ${{ runner.temp }}/geolith-native/platform-imports.txt
             ${{ runner.temp }}/geolith-native/newlib-allocator-imports.txt
           if-no-files-found: error
 

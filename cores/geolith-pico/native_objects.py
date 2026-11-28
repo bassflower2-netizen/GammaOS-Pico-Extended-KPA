@@ -294,3 +294,22 @@ assert {"geo_pico_open", "geo_pico_frame", "geo_pico_save", "retro_init",
 assert {"mutex_acquire", "mutex_release", "arch_disable_ints", "arch_enable_ints"} <= frontend_missing
 (out / "frontend-imports.txt").write_text(frontend_imports)
 print("Pinned native Geolith frontend linked; remaining platform imports:", frontend_imports)
+
+# Resolve the remaining private newlib process/clock ABI. The only strong
+# imports left must be actual LK kernel synchronization functions.
+platform = out / "native_platform.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-std=c11", "-Wall", "-Wextra",
+                "-Werror", "-ffreestanding", "-DGEO_NEWLIB_PLATFORM",
+                "-c", str(root / "native_platform.c"), "-o", str(platform)], check=True)
+platform_linked = out / "geolith-platform-linked.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-nostdlib", "-Wl,-r",
+                "-o", str(platform_linked), str(frontend), str(platform),
+                "-Wl,--start-group", "-lc", "-lm", "-lgcc", "-Wl,--end-group"], check=True)
+platform_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(platform_linked)], text=True)
+strong = {line.split()[-1] for line in platform_imports.splitlines()
+          if line.split() and line.split()[-2:-1] == ["U"]}
+kernel = {"mutex_init", "mutex_acquire", "mutex_release", "critical_section_count",
+          "arch_disable_ints", "arch_enable_ints"}
+assert strong == kernel, (strong - kernel, kernel - strong)
+(out / "platform-imports.txt").write_text(platform_imports)
+print("Native Geolith platform link complete except real LK kernel imports:", platform_imports)
