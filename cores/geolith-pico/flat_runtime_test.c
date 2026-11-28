@@ -1,8 +1,8 @@
 /* ARM Linux runner ONLY. Execute the exact freestanding overlay with its own
  * newlib, using a real read-only FAT image. No Linux code enters the blob. */
 #define _GNU_SOURCE
-#include "geo_blob_abi.h"
-#include "../../emu/gba/fat_ro.h"
+#include "../../emu/neo/geo_core_loader.h"
+#include "../../emu/gba/core_file.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,31 +43,23 @@ static uint32_t audio(const int16_t *p,uint32_t n)
 static void av_log(const char *msg){fputs(msg,stderr);}
 int main(int argc,char **argv)
 {
-    assert(argc==3);
-    FILE *blob=fopen(argv[1],"rb");assert(blob);
-    uint32_t hdr[5];assert(fread(hdr,1,sizeof hdr,blob)==sizeof hdr);
-    assert(hdr[0]==GEO_BLOB_MAGIC&&hdr[1]==GEO_BLOB_VERSION);
-    assert(hdr[2]>=sizeof hdr&&!(hdr[2]&3u)&&hdr[2]<hdr[3]);
-    assert(hdr[3]<=hdr[4]&&hdr[4]<=GEO_BLOB_SLOT_SIZE);
-    assert(!fseek(blob,0,SEEK_END)&&ftell(blob)==(long)hdr[3]);
-    rewind(blob);
+    assert(argc==2);
+    FILE *disk=fopen(argv[1],"rb");assert(disk);
+    fat_vol v;assert(!fat_mount(&v,rd,disk));
+    assert(geo_core_check(NULL)==CORE_FILE_NO_CARD);
+    assert(geo_core_check(&v)==CORE_FILE_OK);
     void *slot=mmap((void *)(uintptr_t)GEO_BLOB_VMA,GEO_BLOB_SLOT_SIZE,
                     PROT_READ|PROT_WRITE|PROT_EXEC,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     assert(slot==(void *)(uintptr_t)GEO_BLOB_VMA);
-    assert(fread(slot,1,hdr[3],blob)==hdr[3]);assert(!fclose(blob));
-    memset((unsigned char *)slot+hdr[3],0,hdr[4]-hdr[3]);
-    __builtin___clear_cache(slot,(char *)slot+hdr[3]);
-    geo_blob_entry_fn entry=(geo_blob_entry_fn)((unsigned char *)slot+hdr[2]);
-    const struct geo_blob_exports *api=entry();
-    assert(api&&api->magic==GEO_BLOB_MAGIC&&api->version==GEO_BLOB_VERSION&&api->size==sizeof *api);
-    assert(api->init&&api->open&&api->close&&api->frame&&api->reset&&api->state_size&&api->save&&api->load);
+    int error=-1;
+    const struct geo_blob_exports *api=geo_core_load(&v,&error);
+    assert(api&&error==CORE_FILE_OK);
+    puts("Neo Geo firmware loader loaded exact flat overlay from FAT");
     /* Test allocation only, not a reservation recommendation for the device. */
     const uint32_t heap_size=64u*1024u*1024u;
     void *heap=mmap(NULL,heap_size,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     assert(heap!=MAP_FAILED);
     void *scratch=malloc(1024u*1024u);assert(scratch);
-    FILE *disk=fopen(argv[2],"rb");assert(disk);
-    fat_vol v;assert(!fat_mount(&v,rd,disk));
     const struct geo_blob_host host={sizeof host,NULL,log_out,clock_out,fatal,reject_put,reject_mkpath};
     const struct geo_blob_av av={video,audio,av_log};
     assert(api->open(&v,"/roms/neo/test.neo",1,scratch,1024u*1024u,&av)==-1);

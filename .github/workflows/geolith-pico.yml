@@ -8,6 +8,8 @@ on:
       - 'emu/gba/fat_ro.*'
       - 'emu/gba/fat_wr.*'
       - 'emu/gba/fat_exfat.*'
+      - 'emu/gba/core_file.*'
+      - 'emu/neo/**'
       - '.github/workflows/geolith-pico.yml'
 permissions:
   contents: read
@@ -183,12 +185,13 @@ jobs:
           python3 cores/geolith-pico/fixture.py "$RUNNER_TEMP/geo-flat-fixture"
           truncate -s 64M "$RUNNER_TEMP/geo-flat.img"
           mkfs.fat -F 32 "$RUNNER_TEMP/geo-flat.img"
-          mmd -i "$RUNNER_TEMP/geo-flat.img" ::/roms ::/roms/neo ::/bios
+          mmd -i "$RUNNER_TEMP/geo-flat.img" ::/roms ::/roms/neo ::/bios ::/cores
+          mcopy -i "$RUNNER_TEMP/geo-flat.img" "$RUNNER_TEMP/geolith-native/geolith-probe-NOT-FOR-FLASHING.blob" ::/cores/geolith-pico.blob
           mcopy -i "$RUNNER_TEMP/geo-flat.img" "$RUNNER_TEMP/geo-flat-fixture/test.neo" ::/roms/neo/
           mcopy -i "$RUNNER_TEMP/geo-flat.img" "$RUNNER_TEMP/geo-flat-fixture/aes.zip" "$RUNNER_TEMP/geo-flat-fixture/neogeo.zip" ::/bios/
           rm -r "$RUNNER_TEMP/geo-flat-fixture"
-          arm-linux-gnueabi-gcc -march=armv7-a -mfloat-abi=soft -marm -static -O2 -Wall -Wextra -Werror cores/geolith-pico/flat_runtime_test.c emu/gba/{fat_ro,fat_exfat}.c -o "$RUNNER_TEMP/geo-flat-test"
-          timeout 180s qemu-arm "$RUNNER_TEMP/geo-flat-test" "$RUNNER_TEMP/geolith-native/geolith-probe-NOT-FOR-FLASHING.blob" "$RUNNER_TEMP/geo-flat.img"
+          arm-linux-gnueabi-gcc -march=armv7-a -mfloat-abi=soft -marm -static -O2 -Wall -Wextra -Werror -fno-builtin -DCORE_FILE_USER_TEST cores/geolith-pico/flat_runtime_test.c emu/neo/geo_core_loader.c emu/gba/{core_file,fat_ro,fat_exfat}.c -o "$RUNNER_TEMP/geo-flat-test"
+          timeout 180s qemu-arm "$RUNNER_TEMP/geo-flat-test" "$RUNNER_TEMP/geo-flat.img"
       - name: Execute real newlib allocator on ARM Linux syscall harness
         run: |
           set -eu

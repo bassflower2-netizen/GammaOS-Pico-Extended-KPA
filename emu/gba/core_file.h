@@ -21,6 +21,7 @@
 #define CORE_PATH_NES      "/cores/armnes-pico.blob"
 #define CORE_PATH_HANDY    "/cores/handy-pico.blob"
 #define CORE_PATH_PCE      "/cores/pce-fast-pico.blob"
+#define CORE_PATH_GEO      "/cores/geolith-pico.blob"
 
 enum {
 	CORE_FILE_OK = 0,

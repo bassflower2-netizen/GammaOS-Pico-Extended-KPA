@@ -11,6 +11,11 @@ extern void *memset(void *d, int c, unsigned long n);
 #define CORE_CACHE_LINE 32u
 static void core_sync_code(unsigned long start, unsigned long len)
 {
+#if defined(CORE_FILE_USER_TEST) && defined(__linux__)
+    /* QEMU user mode cannot execute LK's privileged cache operations.
+     * Use the Linux compiler cache-maintenance primitive only in its test. */
+    __builtin___clear_cache((char *)start,(char *)(start+len));
+#else
 	unsigned long s = start & ~(CORE_CACHE_LINE - 1);
 	unsigned long e = start + len;
 	unsigned long a;
@@ -21,6 +26,7 @@ static void core_sync_code(unsigned long start, unsigned long len)
 		__asm__ __volatile__("mcr p15, 0, %0, c7, c5, 1" :: "r"(a) : "memory");  /* ICIMVAU */
 	__asm__ __volatile__("mcr p15, 0, %0, c7, c5, 6" :: "r"(0) : "memory");          /* BPIALL */
 	__asm__ __volatile__("dsb\n\tisb" ::: "memory");
+#endif
 }
 
 void *core_file_load(fat_vol *v, const char *path, unsigned vma, unsigned slot_size,
