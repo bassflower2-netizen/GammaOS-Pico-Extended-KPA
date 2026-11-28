@@ -82,6 +82,15 @@ int geo_session_begin(fat_vol *v,const char *path,uint32_t mode,
     }
     active=1;return 0;
 }
+int geo_session_begin_arena(fat_vol *v,const char *path,uint32_t mode,
+                            void *arena,uint32_t bytes,
+                            const struct geo_blob_host *host,
+                            const struct geo_session_output *o)
+{
+    struct geo_session_memory m;
+    if(geo_session_partition(arena,bytes,&m))return -1;
+    return geo_session_begin(v,path,mode,&m,host,o);
+}
 int geo_session_frame(uint16_t a,uint16_t b)
 {
     if(!active||bad)return -1;

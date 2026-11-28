@@ -24,6 +24,12 @@ int geo_session_begin(fat_vol *,const char *,uint32_t,
                       const struct geo_session_memory *,
                       const struct geo_blob_host *,
                       const struct geo_session_output *);
+/* Start using a platform-reserved exclusive arena. Caller retains ownership
+ * until end returns; no fallback to unreserved physical memory. */
+int geo_session_begin_arena(fat_vol *v,const char *path,uint32_t mode,
+                            void *arena,uint32_t bytes,
+                            const struct geo_blob_host *host,
+                            const struct geo_session_output *o);
 int geo_session_frame(uint16_t,uint16_t);
 int geo_session_reset(void);
 int geo_session_save(int32_t);

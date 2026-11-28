@@ -133,8 +133,10 @@ int main(int argc,char **argv)
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
     overlap=mem;overlap.scratch=(void *)((uintptr_t)-1 & ~(uintptr_t)3u);
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
-    assert(geo_session_begin(&v,"/roms/neo/missing.neo",1,&mem,&host,&output)==-4);
-    assert(!geo_session_begin(&v,"/roms/neo/test.neo",1,&mem,&host,&output));
+    assert(geo_session_begin_arena(&v,"/roms/neo/test.neo",1,arena,arena_size-1,&host,&output)==-1);
+    assert(geo_session_begin_arena(&v,"/roms/neo/missing.neo",1,arena,arena_size,&host,&output)==-4);
+    assert(!geo_session_begin_arena(&v,"/roms/neo/test.neo",1,arena,arena_size,&host,&output));
+    assert(geo_session_begin_arena(&v,"/roms/neo/test.neo",1,arena,arena_size,&host,&output)==-1);
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&mem,&host,&output)==-1);
     assert(geo_session_partition(arena,arena_size,&overlap)==-1);
     assert(!geo_session_timing(&fps,&rate)&&fps==59599&&rate==55943);
