@@ -332,3 +332,28 @@ assert {"geo_device_init", "geo_device_open", "geo_device_close", "geo_device_fr
         "geo_device_reset", "geo_device_save", "geo_device_load"} <= device_defined
 (out / "device-imports.txt").write_text(device_imports)
 print("Native device session linked; only LK kernel imports remain")
+
+# Build a standalone overlay without the second private LK writer. The
+# firmware supplies its already synchronized writer via the versioned ABI.
+blob_entry = out / "geo_blob_entry.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-std=c11", "-Wall", "-Wextra",
+                "-Werror", "-ffreestanding", "-c", str(root / "blob_entry.c"),
+                "-o", str(blob_entry)], check=True)
+blob_elf = out / "geolith-probe.elf"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-nostdlib", "-static", "-Wl,--no-undefined",
+                "-Wl,-T," + str(root / "blob.ld"), "-Wl,-Map," + str(out / "geolith-probe.map"),
+                "-o", str(blob_elf), str(save_linked), str(adapter), *map(str, frontend_objects),
+                str(platform), str(device_session), str(blob_entry),
+                "-Wl,--start-group", "-lc", "-lm", "-lgcc", "-Wl,--end-group"], check=True)
+blob_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(blob_elf)], text=True)
+assert not blob_imports.strip(), blob_imports
+blob = out / "geolith-probe-NOT-FOR-FLASHING.blob"
+subprocess.run(["arm-none-eabi-objcopy", "-O", "binary", str(blob_elf), str(blob)], check=True)
+import struct
+data = blob.read_bytes()
+magic, version, entry, load, span = struct.unpack_from("<5I", data)
+assert magic == 0x314f4547 and version == 1
+assert 20 <= entry < load == len(data) <= span <= 0x1000000 and entry % 4 == 0
+(out / "blob-layout.txt").write_text(
+    f"Geolith ABI {version}: load {load}, span {span}, entry +0x{entry:x}\\n".replace("\\n", "\n"))
+print(f"Geolith flat overlay linked without unresolved symbols: {load} bytes, span {span}")
