@@ -199,7 +199,7 @@ firmware_root = root.parent.parent
 writer = out / "session_fat_wr.c.o"
 subprocess.run(["arm-none-eabi-gcc", *arch, "-std=gnu11", "-Os",
                 "-ffreestanding", "-fno-builtin", "-DARCH_ARM=1", "-DDEBUGLEVEL=0",
-                "-D_SIZE_T_DEFINED_", "-I" + str(firmware_root / "include"),
+                "-I" + str(firmware_root / "include"),
                 "-I" + str(firmware_root / "arch/arm/include"),
                 "-Werror=implicit-function-declaration",
                 "-c", str(firmware_root / "emu/gba/fat_wr.c"), "-o", str(writer)], check=True)
