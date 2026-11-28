@@ -10,6 +10,9 @@ struct geo_session_memory {
     void *scratch; uint32_t scratch_size;
     uint16_t *video; uint32_t video_pixels;
 };
+/* Partition an already reserved, exclusively owned arena. No reservation
+ * or ownership transfer is performed. On failure output is unchanged. */
+int geo_session_partition(void *arena,uint32_t bytes,struct geo_session_memory *result);
 struct geo_session_output {
     void (*present)(const uint16_t *,uint32_t,uint32_t);
     void (*audio)(const int16_t *,uint32_t,uint32_t);

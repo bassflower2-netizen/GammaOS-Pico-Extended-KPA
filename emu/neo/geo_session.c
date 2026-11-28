@@ -24,6 +24,21 @@ static int memory_ok(const struct geo_session_memory *m)
         apart(b,m->scratch_size,GEO_BLOB_VMA,GEO_BLOB_SLOT_SIZE)&&
         apart(c,n,GEO_BLOB_VMA,GEO_BLOB_SLOT_SIZE);
 }
+int geo_session_partition(void *arena,uint32_t bytes,struct geo_session_memory *result)
+{
+    const uint32_t scratch=4u*1024u*1024u;
+    const uint32_t pixels=GEO_VIDEO_MAX_W*GEO_VIDEO_MAX_H;
+    const uint32_t overhead=scratch+pixels*2u;
+    uintptr_t base=(uintptr_t)arena;
+    if(!result||busy||(base&15u)||bytes<overhead+64u*1024u*1024u||
+       !apart(base,bytes,GEO_BLOB_VMA,GEO_BLOB_SLOT_SIZE))return -1;
+    uint32_t heap=(bytes-overhead)&~15u;
+    struct geo_session_memory m={arena,heap,(void *)(base+heap),scratch,
+                                 (uint16_t *)(base+heap+scratch),pixels};
+    if(!memory_ok(&m))return -1;
+    *result=m;
+    return 0;
+}
 static void video(const void *p,uint32_t w,uint32_t h,uint32_t pitch)
 {
     int rc=geo_video_rgb565(mem.video,mem.video_pixels,p,w,h,pitch);

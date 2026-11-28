@@ -45,8 +45,9 @@ static uint32_t audio(const int16_t *p,uint32_t n)
 {if(n)assert(p);audio_frames+=n;return n;}
 static void av_log(const char *msg){fputs(msg,stderr);}
 static unsigned present_count,submitted,submitted_rate;
+static const uint16_t *expected_display=display;
 static void present(const uint16_t *p,uint32_t w,uint32_t h)
-{assert(p==display&&w&&h&&w<=320&&h<=264);++present_count;}
+{assert(p==expected_display&&w&&h&&w<=320&&h<=264);++present_count;}
 static void submit(const int16_t *p,uint32_t n,uint32_t rate)
 {assert(p&&n&&n<=4096);submitted+=n;submitted_rate=rate;}
 int main(int argc,char **argv)
@@ -103,10 +104,21 @@ int main(int argc,char **argv)
     printf("Geolith native flat runtime passed: %u video callbacks, %u stereo frames, %u byte state, %u sector reads\n",
            videos,audio_frames,state,reads);
     /* Re-load the actual overlay through the firmware-facing session wrapper. */
-    const struct geo_session_memory mem={heap,heap_size,scratch,1024u*1024u,
-                                         display,sizeof display/sizeof display[0]};
+    const uint32_t arena_size=heap_size+4u*1024u*1024u+GEO_VIDEO_MAX_W*GEO_VIDEO_MAX_H*2u;
+    void *arena=mmap(NULL,arena_size,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
+    assert(arena!=MAP_FAILED);
+    struct geo_session_memory mem={0};
+    assert(geo_session_partition(arena,arena_size-1,&mem)==-1&&!mem.heap);
+    assert(geo_session_partition((char *)arena+1,arena_size,&mem)==-1&&!mem.heap);
+    assert(geo_session_partition(slot,arena_size,&mem)==-1&&!mem.heap);
+    assert(geo_session_partition((void *)((uintptr_t)-1&~(uintptr_t)15u),arena_size,&mem)==-1);
+    assert(!geo_session_partition(arena,arena_size,&mem));
+    assert(mem.heap==arena&&mem.heap_size==heap_size&&mem.scratch_size==4u*1024u*1024u);
+    assert((uintptr_t)mem.scratch==(uintptr_t)arena+heap_size);
+    assert((uintptr_t)mem.video==(uintptr_t)mem.scratch+mem.scratch_size);
+    expected_display=mem.video;
     const struct geo_session_output output={present,submit,av_log};
-    struct geo_session_memory overlap=mem;overlap.scratch=heap;
+    struct geo_session_memory overlap=mem;overlap.scratch=mem.heap;
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
     overlap=mem;overlap.heap=slot;
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&overlap,&host,&output)==-1);
@@ -120,6 +132,7 @@ int main(int argc,char **argv)
     assert(geo_session_begin(&v,"/roms/neo/missing.neo",1,&mem,&host,&output)==-4);
     assert(!geo_session_begin(&v,"/roms/neo/test.neo",1,&mem,&host,&output));
     assert(geo_session_begin(&v,"/roms/neo/test.neo",1,&mem,&host,&output)==-1);
+    assert(geo_session_partition(arena,arena_size,&overlap)==-1);
     assert(!geo_session_timing(&fps,&rate)&&fps==59599&&rate==55943);
     for(unsigned k=0;k<8;k++)assert(!geo_session_frame(0,0));
     assert(present_count==8&&submitted>0&&submitted_rate==rate);
@@ -131,6 +144,7 @@ int main(int argc,char **argv)
     assert(!write_requests);
     printf("GammaOS Neo Geo session passed: %u displayed frames, %u audio frames at %u Hz\n",
            present_count,submitted,submitted_rate);
+    assert(!munmap(arena,arena_size));
     assert(!fclose(disk));free(scratch);
     assert(!munmap(heap,heap_size));assert(!munmap(slot,GEO_BLOB_SLOT_SIZE));
     return 0;
