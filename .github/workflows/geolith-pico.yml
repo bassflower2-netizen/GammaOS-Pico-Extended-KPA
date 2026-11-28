@@ -138,7 +138,7 @@ jobs:
       - name: Install bare-metal toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi binutils-arm-none-eabi qemu-user
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi binutils-arm-none-eabi qemu-user gcc-arm-linux-gnueabi libc6-dev-armel-cross dosfstools mtools
       - name: Build native static zlib
         run: |
           set -eu
@@ -177,6 +177,18 @@ jobs:
           fi
       - name: Compile native engine and inventory unresolved imports
         run: python3 cores/geolith-pico/native_objects.py geo-upstream "$RUNNER_TEMP/geolith-native" "$RUNNER_TEMP/zlib-native"
+      - name: Execute actual flat Geolith overlay from synthetic FAT image
+        run: |
+          set -eu
+          python3 cores/geolith-pico/fixture.py "$RUNNER_TEMP/geo-flat-fixture"
+          truncate -s 64M "$RUNNER_TEMP/geo-flat.img"
+          mkfs.fat -F 32 "$RUNNER_TEMP/geo-flat.img"
+          mmd -i "$RUNNER_TEMP/geo-flat.img" ::/roms ::/roms/neo ::/bios
+          mcopy -i "$RUNNER_TEMP/geo-flat.img" "$RUNNER_TEMP/geo-flat-fixture/test.neo" ::/roms/neo/
+          mcopy -i "$RUNNER_TEMP/geo-flat.img" "$RUNNER_TEMP/geo-flat-fixture/aes.zip" "$RUNNER_TEMP/geo-flat-fixture/neogeo.zip" ::/bios/
+          rm -r "$RUNNER_TEMP/geo-flat-fixture"
+          arm-linux-gnueabi-gcc -march=armv7-a -mfloat-abi=soft -marm -static -O2 -Wall -Wextra -Werror cores/geolith-pico/flat_runtime_test.c emu/gba/{fat_ro,fat_exfat}.c -o "$RUNNER_TEMP/geo-flat-test"
+          timeout 180s qemu-arm "$RUNNER_TEMP/geo-flat-test" "$RUNNER_TEMP/geolith-native/geolith-probe-NOT-FOR-FLASHING.blob" "$RUNNER_TEMP/geo-flat.img"
       - name: Execute real newlib allocator on ARM Linux syscall harness
         run: |
           set -eu
