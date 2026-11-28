@@ -239,3 +239,56 @@ assert {"retro_init", "retro_load_game", "retro_run", "retro_serialize",
         "retro_unserialize", "retro_unload_game"} <= controller_missing, controller_missing
 (out / "controller-imports.txt").write_text(controller_imports)
 print("Native Geolith session controller linked; libretro frontend imports explicit")
+
+# Compile the remaining translation units from the very same pinned make plan.
+# Keep the earlier engine-only and controller probes intact so failures can be
+# localized. No substitute retro_* implementations are permitted.
+frontend_objects = []
+seen_frontend = set()
+engine_prefixes = ("../src/", "../deps/miniz/", "../deps/speex/",
+                   "../deps/libretro-common/", "../deps/lzma/", "../deps/zstd/")
+for line in plan.splitlines():
+    if not line.startswith("arm-none-eabi-gcc "):
+        continue
+    args = shlex.split(line)
+    if "-c" not in args:
+        continue
+    sources = [a for a in args[1:] if a.endswith(".c") and not a.startswith("-")
+               and (cwd / a).is_file()]
+    if len(sources) != 1:
+        continue
+    src = sources[0]
+    if src.startswith(engine_prefixes):
+        continue
+    source_path = (cwd / src).resolve()
+    assert source_path.is_relative_to(up), source_path
+    if source_path in seen_frontend:
+        continue
+    seen_frontend.add(source_path)
+    obj = out / ("frontend_" + str(source_path.relative_to(up)).replace("/", "_") + ".o")
+    flags = [a for a in args[1:] if a.startswith(("-I", "-D"))
+             and not a.startswith("-DGIT_VERSION")]
+    subprocess.run(["arm-none-eabi-gcc", *arch, "-ffreestanding", "-fno-common", "-Os",
+                    "-D__STDC_FORMAT_MACROS=1", "-D__STDC_LIMIT_MACROS=1",
+                    "-D__STDC_CONSTANT_MACROS=1", "-include", str(shim),
+                    "-I" + str(native_headers), "-I" + str(zlib / "include"),
+                    "-Werror=implicit-function-declaration", *flags,
+                    "-c", src, "-o", str(obj)], cwd=cwd, check=True)
+    frontend_objects.append(obj)
+assert frontend_objects, "Pinned make plan did not provide a frontend translation unit"
+frontend = out / "geolith-frontend-linked.o"
+subprocess.run(["arm-none-eabi-gcc", *arch, "-nostdlib", "-Wl,-r",
+                "-o", str(frontend), str(controller), *map(str, frontend_objects),
+                "-Wl,--start-group", "-lc", "-lm", "-lgcc", "-Wl,--end-group"], check=True)
+frontend_imports = subprocess.check_output(["arm-none-eabi-nm", "-u", str(frontend)], text=True)
+frontend_missing = {line.split()[-1] for line in frontend_imports.splitlines() if line.strip()}
+frontend_defined = {line.split()[-1] for line in subprocess.check_output(
+    ["arm-none-eabi-nm", "--defined-only", str(frontend)], text=True).splitlines() if line.strip()}
+required_retro = {symbol for symbol in controller_missing if symbol.startswith("retro_")}
+assert required_retro and required_retro <= frontend_defined, required_retro - frontend_defined
+assert not any(s.startswith(("retro_", "geo_", "fat_", "exfat_")) for s in frontend_missing), frontend_missing
+assert {"geo_pico_open", "geo_pico_frame", "geo_pico_save", "retro_init",
+        "retro_load_game", "retro_run", "retro_unserialize"} <= frontend_defined
+assert {"mutex_acquire", "mutex_release", "arch_disable_ints", "arch_enable_ints"} <= frontend_missing
+(out / "frontend-imports.txt").write_text(frontend_imports)
+print("Pinned native Geolith frontend linked; remaining platform imports:", frontend_imports)
